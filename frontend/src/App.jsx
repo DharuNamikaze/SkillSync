@@ -4,11 +4,7 @@ const App = () => {
   return (
     <div>App
 
-
-      Jiiiiiiiiiiiiiiiii
-      asdasd
-      sad
-      asd
+changes from leader
     </div>
   )
 }
