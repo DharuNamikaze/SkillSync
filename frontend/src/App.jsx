@@ -5,10 +5,7 @@ const App = () => {
     <div>App
 
 
-      Jiiiiiiiiiiiiiiiii
-      asdasd
-      sad
-      asd
+      changes from jeffina 
     </div>
   )
 }
