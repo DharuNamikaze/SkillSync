@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Home from "./components/Home";
@@ -9,19 +9,35 @@ import Profile from "./components/Profile";
 import Settings from "./components/Settings";
 import Login from "./components/Login";
 import NotFound from "./components/NotFound";
+import RequireAuth from "./components/RequireAuth";
+import RedirectIfAuth from "./components/RedirectIfAuth";
+import { getAuthToken } from "./auth";
 
 function App() {
+  const [isAuthed, setIsAuthed] = useState(Boolean(getAuthToken()));
+
+  useEffect(() => {
+    const update = () => setIsAuthed(Boolean(getAuthToken()));
+    window.addEventListener("auth-change", update);
+    window.addEventListener("storage", update);
+    return () => {
+      window.removeEventListener("auth-change", update);
+      window.removeEventListener("storage", update);
+    };
+  }, []);
+
   return (
     <BrowserRouter>
-      <Navbar />
+      {isAuthed ? <Navbar /> : null}
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/projects" element={<Projects />} />
-        <Route path="/teams" element={<Teams />} />
-        <Route path="/notifications" element={<Notifications />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/settings" element={<Settings />} />
+        <Route path="/" element={<RequireAuth><Home /></RequireAuth>} />
+        <Route path="/login" element={<RedirectIfAuth><Login /></RedirectIfAuth>} />
+        <Route path="/Home" element={<RequireAuth><Home /></RequireAuth>} />
+        <Route path="/projects" element={<RequireAuth><Projects /></RequireAuth>} />
+        <Route path="/teams" element={<RequireAuth><Teams /></RequireAuth>} />
+        <Route path="/notifications" element={<RequireAuth><Notifications /></RequireAuth>} />
+        <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
+        <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
