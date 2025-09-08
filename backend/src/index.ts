@@ -1,7 +1,18 @@
-const express = require("express");
-const cors = require("cors");
-const mongoose = require("mongoose");
-require("dotenv").config();
+import express, { Request, Response } from "express";
+import cors from "cors";
+import mongoose, { Schema, Document, Model } from "mongoose";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+interface IUser extends Document {
+  googleId: string;
+  email: string;
+  name: string;
+  picture: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -9,7 +20,7 @@ const port = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-app.get("/health", (req, res) => {
+app.get("/health", (req: Request, res: Response) => {
   res.json({ status: "ok" });
 });
 
@@ -22,10 +33,10 @@ if (!mongoUri) {
 mongoose
   .connect(mongoUri, { dbName: process.env.MONGODB_DB || undefined })
   .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.error("MongoDB connection error:", err.message));
+  .catch((err: Error) => console.error("MongoDB connection error:", err.message));
 
 // User model
-const userSchema = new mongoose.Schema(
+const userSchema = new Schema(
   {
     googleId: { type: String, index: true },
     email: { type: String, index: true },
@@ -34,10 +45,21 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-const User = mongoose.models.User || mongoose.model("User", userSchema);
+
+const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>("User", userSchema);
+
+// Request interface for upsert endpoint
+interface UpsertUserRequest extends Request {
+  body: {
+    googleId?: string;
+    email?: string;
+    name?: string;
+    picture?: string;
+  };
+}
 
 // Upsert user endpoint
-app.post("/api/users/upsert", async (req, res) => {
+app.post("/api/users/upsert", async (req: UpsertUserRequest, res: Response) => {
   try {
     const { googleId, email, name, picture } = req.body || {};
     if (!email && !googleId) {
@@ -47,6 +69,7 @@ app.post("/api/users/upsert", async (req, res) => {
     const filter = googleId ? { googleId } : { email };
     const update = { $set: { email, name, picture, googleId } };
     const options = { upsert: true, new: true, setDefaultsOnInsert: true };
+    
     const user = await User.findOneAndUpdate(filter, update, options).lean();
     res.json({ ok: true, user });
   } catch (err) {
@@ -58,5 +81,3 @@ app.post("/api/users/upsert", async (req, res) => {
 app.listen(port, () => {
   console.log(`Backend listening on http://localhost:${port}`);
 });
-
-

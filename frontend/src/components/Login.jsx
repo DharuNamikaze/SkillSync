@@ -48,7 +48,6 @@ function Login() {
           onError={handleLoginError}
           text="signin_with"
           shape="pill"
-
         />  
       </span>
 
