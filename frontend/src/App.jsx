@@ -9,7 +9,6 @@ import Settings from "./components/Settings";
 import Messages from "./components/Messages";
 import Dashboard from "./components/Dashboard";
 import Calendar from "./components/Calendar";
-import Skills from "./components/Skills";
 import Login from "./components/Login";
 import NotFound from "./components/NotFound";
 import RequireAuth from "./components/RequireAuth";
@@ -39,7 +38,6 @@ function App() {
         <Route path="/teams" element={<RequireAuth><Teams /></RequireAuth>} />
         <Route path="/messages" element={<RequireAuth><Messages /></RequireAuth>} />
         <Route path="/calendar" element={<RequireAuth><Calendar /></RequireAuth>} />
-        <Route path="/skills" element={<RequireAuth><Skills /></RequireAuth>} />
         <Route path="/notifications" element={<RequireAuth><Notifications /></RequireAuth>} />
         <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
         <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />

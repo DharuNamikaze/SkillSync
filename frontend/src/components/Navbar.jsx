@@ -38,9 +38,6 @@ function Navbar() {
       <NavLink to="/calendar" style={linkStyle}>
         Calendar
       </NavLink>
-      <NavLink to="/skills" style={linkStyle}>
-        Skills
-      </NavLink>
       <NavLink to="/notifications" style={linkStyle}>
         Notifications
       </NavLink>
