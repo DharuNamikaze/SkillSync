@@ -28,7 +28,7 @@ function Login() {
         console.warn("User upsert failed", e);
       }
       alert(`Welcome ${decoded.name}`);
-      navigate("/Home");
+      navigate("/");
     } catch (error) {
       console.error("JWT Decode Error:", error);
     }

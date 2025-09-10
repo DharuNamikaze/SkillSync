@@ -23,14 +23,23 @@ function Navbar() {
         zIndex: 10,
       }}
     >
-      <NavLink to="/" style={linkStyle} end>
-        Home
+      <NavLink to="/" style={linkStyle}>
+        Dashboard
       </NavLink>
       <NavLink to="/projects" style={linkStyle}>
         Projects
       </NavLink>
       <NavLink to="/teams" style={linkStyle}>
         Teams
+      </NavLink>
+      <NavLink to="/messages" style={linkStyle}>
+        Messages
+      </NavLink>
+      <NavLink to="/calendar" style={linkStyle}>
+        Calendar
+      </NavLink>
+      <NavLink to="/skills" style={linkStyle}>
+        Skills
       </NavLink>
       <NavLink to="/notifications" style={linkStyle}>
         Notifications
