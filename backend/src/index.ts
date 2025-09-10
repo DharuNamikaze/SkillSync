@@ -1,83 +1,44 @@
-import express, { Request, Response } from "express";
-import cors from "cors";
-import mongoose, { Schema, Document, Model } from "mongoose";
-import dotenv from "dotenv";
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import routes from './routes';
+import { errorHandler, notFound } from './middleware/errorHandler';
+import connectDB from './utils/database';
 
+// Load environment variables
 dotenv.config();
-
-interface IUser extends Document {
-  googleId: string;
-  email: string;
-  name: string;
-  picture: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 const app = express();
 const port = process.env.PORT || 3001;
 
-app.use(cors());
-app.use(express.json());
+// Connect to MongoDB
+connectDB();
 
-app.get("/health", (req: Request, res: Response) => {
-  res.json({ status: "ok" });
+// Middleware
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true
+}));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
+
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  next();
 });
 
-// MongoDB connection
-const mongoUri = process.env.MONGODB_URI || "";
-if (!mongoUri) {
-  console.warn("MONGODB_URI is not set. Backend will start without DB.");
-}
+// Routes
+app.use('/api', routes);
 
-mongoose
-  .connect(mongoUri, { dbName: process.env.MONGODB_DB || undefined })
-  .then(() => console.log("MongoDB connected"))
-  .catch((err: Error) => console.error("MongoDB connection error:", err.message));
+// Error handling middleware
+app.use(notFound);
+app.use(errorHandler);
 
-// User model
-const userSchema = new Schema(
-  {
-    googleId: { type: String, index: true },
-    email: { type: String, index: true },
-    name: String,
-    picture: String,
-  },
-  { timestamps: true }
-);
-
-const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>("User", userSchema);
-
-// Request interface for upsert endpoint
-interface UpsertUserRequest extends Request {
-  body: {
-    googleId?: string;
-    email?: string;
-    name?: string;
-    picture?: string;
-  };
-}
-
-// Upsert user endpoint
-app.post("/api/users/upsert", async (req: UpsertUserRequest, res: Response) => {
-  try {
-    const { googleId, email, name, picture } = req.body || {};
-    if (!email && !googleId) {
-      return res.status(400).json({ error: "email or googleId required" });
-    }
-
-    const filter = googleId ? { googleId } : { email };
-    const update = { $set: { email, name, picture, googleId } };
-    const options = { upsert: true, new: true, setDefaultsOnInsert: true };
-    
-    const user = await User.findOneAndUpdate(filter, update, options).lean();
-    res.json({ ok: true, user });
-  } catch (err) {
-    console.error("Upsert user failed:", err);
-    res.status(500).json({ error: "server_error" });
-  }
-});
-
+// Start server
 app.listen(port, () => {
-  console.log(`Backend listening on http://localhost:${port}`);
+  console.log(`🚀 SkillSync Backend running on http://localhost:${port}`);
+  console.log(`📚 API Documentation available at http://localhost:${port}/api/health`);
 });
+
+export default app;
