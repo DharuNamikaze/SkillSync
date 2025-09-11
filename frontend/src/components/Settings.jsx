@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { clearAuthToken } from "../auth";
 import { useNavigate } from "react-router-dom";
+import { useTheme } from "../ThemeContext";
 import {
   User,
   Mail,
@@ -91,8 +92,29 @@ function Settings() {
     fetchUserData();
   }, []);
 
+  // Get theme context
+  const { theme, updateTheme } = useTheme();
+
+  // Sync theme state with form data when component mounts or theme changes
+  useEffect(() => {
+    if (formData?.preferences && theme !== formData.preferences.theme) {
+      setFormData(prev => ({
+        ...prev,
+        preferences: {
+          ...prev.preferences,
+          theme: theme
+        }
+      }));
+    }
+  }, [theme, formData?.preferences]);
+
   // Handle form input changes
   const handleInputChange = (section, field, value) => {
+    // If changing theme, update ThemeContext as well
+    if (section === 'preferences' && field === 'theme') {
+      updateTheme(value);
+    }
+    
     setFormData(prev => ({
       ...prev,
       [section]: {
