@@ -1,0 +1,243 @@
+/* Theme variables */
+:root {
+    /* Light theme */
+    --light-bg-primary: #ffffff;
+    --light-bg-secondary: #f5f7fa;
+    --light-text-primary: #333333;
+    --light-text-secondary: #666666;
+    --light-border: rgba(0, 0, 0, 0.1);
+    --light-shadow: rgba(0, 0, 0, 0.1);
+    --light-accent: #1a73e8;
+    --light-hover: rgba(26, 115, 232, 0.1);
+
+    /* Dark theme */
+    --dark-bg-primary: #121212;
+    --dark-bg-secondary: #1a1a1a;
+    --dark-text-primary: #ffffff;
+    --dark-text-secondary: #b0b0b0;
+    --dark-border: rgba(255, 255, 255, 0.05);
+    --dark-shadow: rgba(0, 0, 0, 0.3);
+    --dark-accent: #1a73e8;
+    --dark-hover: rgba(255, 255, 255, 0.05);
+}
+
+/* Apply theme variables */
+.light-theme {
+    --bg-primary: var(--light-bg-primary);
+    --bg-secondary: var(--light-bg-secondary);
+    --text-primary: var(--light-text-primary);
+    --text-secondary: var(--light-text-secondary);
+    --border: var(--light-border);
+    --shadow: var(--light-shadow);
+    --accent: var(--light-accent);
+    --hover: var(--light-hover);
+}
+
+.dark-theme {
+    --bg-primary: var(--dark-bg-primary);
+    --bg-secondary: var(--dark-bg-secondary);
+    --text-primary: var(--dark-text-primary);
+    --text-secondary: var(--dark-text-secondary);
+    --border: var(--dark-border);
+    --shadow: var(--dark-shadow);
+    --accent: var(--dark-accent);
+    --hover: var(--dark-hover);
+}
+
+/* Base sidebar styles */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 250px;
+    background-color: var(--bg-secondary);
+    background-image: linear-gradient(to bottom, var(--bg-secondary), var(--bg-primary));
+    box-shadow: 2px 0 10px var(--shadow);
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 20;
+    transition: all 0.3s ease;
+    overflow-y: auto;
+    border-right: 1px solid var(--border);
+}
+
+/* Sidebar header */
+.sidebar-header {
+    padding: 20px 16px 40px;
+    text-align: center;
+}
+
+.sidebar-header h1 {
+    color: var(--text-primary);
+    font-size: 24px;
+    margin: 0;
+}
+
+/* Sidebar navigation links */
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: 0 12px;
+}
+
+.sidebar-nav a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.sidebar-nav a:hover {
+    background-color: var(--hover);
+    transform: translateX(3px);
+    color: var(--text-primary);
+}
+
+.sidebar-nav a.active {
+    color: var(--accent);
+    background-color: var(--hover);
+    font-weight: 500;
+}
+
+/* Hamburger menu button */
+.hamburger-button {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 30;
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    padding: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 10px var(--shadow);
+    transition: all 0.3s ease;
+    animation: fadeIn 0.5s ease-out;
+}
+
+.hamburger-button:hover {
+    background: #1558b7;
+    transform: scale(1.05);
+}
+
+.hamburger-button:active {
+    transform: scale(0.95);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Overlay for mobile menu */
+.mobile-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 15;
+    transition: opacity 0.3s ease;
+}
+
+/* Main content area */
+.main-content {
+    transition: margin-left 0.3s ease;
+    padding: 20px;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+}
+
+/* Global theme styles */
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Card and container styles */
+.card,
+.container {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 8px var(--shadow);
+    color: var(--text-primary);
+}
+
+/* Form elements */
+input,
+select,
+textarea,
+button {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+}
+
+/* Links */
+a {
+    color: var(--accent);
+}
+
+/* Headings */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    color: var(--text-primary);
+}
+
+/* Responsive styles */
+@media (min-width: 1024px) {
+
+    /* Large screens */
+    .sidebar {
+        left: 0;
+    }
+
+    .hamburger-button {
+        display: none;
+    }
+
+    .main-content {
+        margin-left: 250px;
+    }
+}
+
+@media (max-width: 1023px) {
+
+    /* Small and medium screens */
+    .sidebar {
+        left: -280px;
+    }
+
+    .sidebar.open {
+        left: 0;
+    }
+
+    .main-content {
+        margin-left: 0;
+    }
+}
