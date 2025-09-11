@@ -327,7 +327,7 @@ const Notifications = () => {
     
     return (
       <div
-        className={`bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border cursor-pointer group ${
+        className={` bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border cursor-pointer group ${
           notification.isRead 
             ? 'border-gray-100 hover:border-gray-200' 
             : 'border-blue-200 bg-blue-50/30 hover:border-blue-300'
@@ -452,7 +452,7 @@ const Notifications = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-6 rounded-2xl">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">

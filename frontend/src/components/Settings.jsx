@@ -189,7 +189,7 @@ function Settings() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-6 rounded-2xl">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div>
