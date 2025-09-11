@@ -1,15 +1,18 @@
-import React from 'react'
+import './App.css'
+import { HashRouter,Routes,Route } from 'react-router-dom'
+import { Landing } from './Pages/Landing'
+import { Home } from './Pages/Home'
 
-const App = () => {
+function App() {
+
   return (
-    <div>App
+    <HashRouter>
+      <Routes>
+        <Route path="/" element={<Landing/>}/>
+        <Route path="/home" element={<Home/>}/>
 
-czxvasasc
-      Jiiiiiiiiiiiiiiiii
-      asdasd
-      sad
-      asd
-    </div>
+      </Routes>
+    </HashRouter>
   )
 }
 
