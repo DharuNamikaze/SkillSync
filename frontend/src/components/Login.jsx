@@ -1,17 +1,15 @@
 import React from "react";
 import { GoogleLogin } from "@react-oauth/google";
-import { jwtDecode } from "jwt-decode"; // ✅ fixed import
-import { setAuthToken } from "../auth";
+import { useAuth } from "../AuthContext";
 import { useNavigate } from "react-router-dom";
 
 function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleLoginSuccess = async (credentialResponse) => {
     try {
-      const decoded = jwtDecode(credentialResponse.credential);
-      console.log(decoded);
-      setAuthToken(credentialResponse.credential);
+      login(credentialResponse);
       // Register/upsert user in backend
       try {
         await fetch(import.meta.env.VITE_API_BASE_URL + "/api/users/upsert", {
@@ -27,10 +25,10 @@ function Login() {
       } catch (e) {
         console.warn("User upsert failed", e);
       }
-      alert(`Welcome ${decoded.name}`);
-      navigate("/Home");
+      alert("Welcome!");
+      navigate("/");
     } catch (error) {
-      console.error("JWT Decode Error:", error);
+      console.error("Login Error:", error);
     }
   };
 
