@@ -197,9 +197,7 @@ function Calendar() {
     const date = new Date(currentYear, currentMonth, day);
     return events.filter(event => {
       const eventDate = new Date(event.date);
-      return eventDate.getDate() === day && 
-             eventDate.getMonth() === currentMonth && 
-             eventDate.getFullYear() === currentYear;
+      return eventDate.getDate() === day && eventDate.getMonth() === currentMonth && eventDate.getFullYear() === currentYear;
     });
   };
 
@@ -350,7 +348,7 @@ function Calendar() {
   };
 
   return (
-    <div className="p-6 space-y-6 bg-gradient-to-br from-indigo-50 via-white to-purple-50 min-h-[calc(100vh-64px)] ">
+    <div className="p-6 space-y-6 bg-gradient-to-br from-indigo-50 via-white to-purple-50 min-h-[calc(100vh-64px)]  ">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-semibold text-gray-800">Calendar</h2>
         <button 

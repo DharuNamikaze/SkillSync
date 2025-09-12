@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
-import { Menu, X, Home, Briefcase, Users, MessageSquare, Calendar as CalendarIcon, Bell, User, Settings as SettingsIcon } from "lucide-react";
+import { Menu, X, Home, Briefcase, Users, MessageSquare, Calendar as CalendarIcon, Bell, User, Settings as SettingsIcon, LogOut } from "lucide-react";
 import { useTheme } from "../ThemeContext";
+import { useAuth } from "../AuthContext";
 import "../Sidebar.css";
 
 function Sidebar() {
+  const { user, isAuthenticated, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth >= 1024);
   const { theme } = useTheme();
@@ -27,8 +29,8 @@ function Sidebar() {
       const sidebar = document.getElementById("sidebar");
       const hamburger = document.getElementById("hamburger-button");
 
-      if (isMobileMenuOpen && sidebar && !sidebar.contains(event.target) && 
-          hamburger && !hamburger.contains(event.target)) {
+      if (isMobileMenuOpen && sidebar && !sidebar.contains(event.target) &&
+        hamburger && !hamburger.contains(event.target)) {
         setIsMobileMenuOpen(false);
       }
     };
@@ -105,6 +107,22 @@ function Sidebar() {
           <NavLink to="/settings" className={({ isActive }) => isActive ? 'active' : ''} onClick={() => !isLargeScreen && setIsMobileMenuOpen(false)}>
             <SettingsIcon size={18} /> Settings
           </NavLink>
+        </div>
+        <div className="flex-shrink-0 mt-auto">
+          <div className="flex items-center space-x-3 p-4">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{user?.name}</p>
+              <p className="text-xs truncate">{user?.email}</p>
+            </div>
+            <button
+              type='button'
+              title="Logout"
+              onClick={logout}
+              className="hover:text-red-700 hover:bg-red-300 rounded-md"
+            >
+              <LogOut className="w-4 h-4 cursor-pointer" />
+            </button>
+          </div>
         </div>
       </div>
 

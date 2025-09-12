@@ -1,70 +1,14 @@
 import React, { useState } from 'react';
-import { User, Mail, MapPin, Calendar, Github, Linkedin, ExternalLink, Edit3, Plus, Star, Clock, Users } from 'lucide-react';
+import { useAuth } from "../AuthContext";
+import { Mail, Calendar, Github, Linkedin, ExternalLink, Edit3, Plus, Star, Clock, Users } from 'lucide-react';
 
 const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const { user } = useAuth();
 
-  // Mock user data - in real app this would come from props/context/API
-  const [userData, setUserData] = useState({
-    name: 'Jane Doe',
-    title: 'Full-stack Developer',
-    bio: 'Passionate about MERN stack and team collaboration. I love creating seamless user experiences and building scalable applications.',
-    email: 'jane.doe@example.com',
-    joinDate: 'January 2023',
-    avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face',
-    skills: [
-      { name: 'React', level: 'Expert', category: 'Frontend' },
-      { name: 'Node.js', level: 'Advanced', category: 'Backend' },
-      { name: 'Express', level: 'Advanced', category: 'Backend' },
-      { name: 'MongoDB', level: 'Intermediate', category: 'Database' },
-      { name: 'TypeScript', level: 'Advanced', category: 'Language' },
-      { name: 'Figma', level: 'Intermediate', category: 'Design' },
-      { name: 'Docker', level: 'Intermediate', category: 'DevOps' },
-      { name: 'AWS', level: 'Beginner', category: 'Cloud' }
-    ],
-    projects: [
-      {
-        id: 1,
-        name: 'SkillSync Platform',
-        role: 'Team Lead',
-        description: 'A collaborative platform for skill sharing and team building',
-        status: 'Active',
-        technologies: ['React', 'Node.js', 'MongoDB'],
-        startDate: '2024-01',
-        teamSize: 5
-      },
-      {
-        id: 2,
-        name: 'Realtime Chat',
-        role: 'Backend Developer',
-        description: 'Real-time messaging application with WebSocket support',
-        status: 'Completed',
-        technologies: ['Socket.io', 'Express', 'Redis'],
-        startDate: '2023-09',
-        teamSize: 3
-      },
-      {
-        id: 3,
-        name: 'E-commerce Dashboard',
-        role: 'Full-stack Developer',
-        description: 'Analytics dashboard for e-commerce businesses',
-        status: 'In Progress',
-        technologies: ['React', 'TypeScript', 'PostgreSQL'],
-        startDate: '2024-03',
-        teamSize: 2
-      }
-    ],
-    socialLinks: {
-      github: 'https://github.com/janedoe',
-      linkedin: 'https://linkedin.com/in/janedoe'
-    },
-    stats: {
-      projectsCompleted: 12,
-      totalCommits: 1247,
-      yearsExperience: 3
-    }
-  });
+  // Use user from AuthContext
+  const userData = user || {};
 
   const getSkillColor = (level) => {
     const colors = {

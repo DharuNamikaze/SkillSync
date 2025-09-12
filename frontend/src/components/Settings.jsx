@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { clearAuthToken } from "../auth";
+import { useAuth } from "../AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../ThemeContext";
 import {
@@ -22,75 +22,21 @@ import {
 
 function Settings() {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("profile");
-  const [userData, setUserData] = useState(null);
   const [formData, setFormData] = useState({});
   const [unsavedChanges, setUnsavedChanges] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
-  
-  const logout = () => {
-    clearAuthToken();
-    navigate("/login", { replace: true });
-  };
 
   // Simulate API call to fetch user data
   useEffect(() => {
-    const fetchUserData = async () => {
-      setLoading(true);
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // Mock data that would come from your backend
-      const mockUserData = {
-        id: "user-123",
-        name: "Jane Doe",
-        email: "jane.doe@example.com",
-        avatar: "https://ui-avatars.com/api/?name=Jane+Doe&background=0D8ABC&color=fff",
-        role: "Full-stack Developer",
-        bio: "Passionate developer with experience in React, Node.js, and cloud technologies. Always eager to learn and collaborate on innovative projects.",
-        location: "San Francisco, CA",
-        website: "https://janedoe.dev",
-        github: "janedoe",
-        linkedin: "jane-doe",
-        twitter: "janedoedev",
-        skills: ["React", "Node.js", "TypeScript", "AWS", "UI/UX Design"],
-        notifications: {
-          email: true,
-          browser: true,
-          mobile: false,
-          newsletter: true,
-          teamUpdates: true,
-          projectInvites: true,
-          mentorshipRequests: true
-        },
-        privacy: {
-          profileVisibility: "public",
-          showEmail: false,
-          showLocation: true,
-          allowTagging: true,
-          allowMessaging: true
-        },
-        preferences: {
-          theme: "system",
-          language: "en",
-          timezone: "America/Los_Angeles"
-        },
-        security: {
-          twoFactorEnabled: false,
-          lastPasswordChange: "2023-12-15",
-          activeSessions: 2
-        }
-      };
-      
-      setUserData(mockUserData);
-      setFormData(mockUserData);
+    if (user) {
+      setFormData(user);
       setLoading(false);
-    };
-
-    fetchUserData();
-  }, []);
+    }
+  }, [user]);
 
   // Get theme context
   const { theme, updateTheme } = useTheme();
