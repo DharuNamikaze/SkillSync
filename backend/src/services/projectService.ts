@@ -62,6 +62,67 @@ export class ProjectService {
     });
   }
 
+  async ensureWorkspace(projectId: string): Promise<IProject | null> {
+    const project = await Project.findById(projectId);
+    if (!project) return null;
+
+    try {
+      const csb = new CodeSandboxService();
+      let sandboxId = project.workspace?.sandboxId;
+
+      // If sandbox missing or invalid, create a new one
+      if (!sandboxId) {
+        const ws = await this.createCodeSandboxWorkspace(project as any);
+        if (!ws) return project;
+        sandboxId = ws.id;
+        await Project.findByIdAndUpdate(projectId, {
+          workspace: {
+            sandboxId: (ws as any).id,
+            ideUrl: (ws as any).url,
+            embedUrl: (ws as any).embed_url,
+            editUrl: (ws as any).editor_url
+          }
+        });
+        return await Project.findById(projectId);
+      }
+
+      // Try to fetch; if fails, recreate
+      try {
+        await (csb as any).sdk?.sandboxes.get(sandboxId);
+      } catch {
+        const ws = await this.createCodeSandboxWorkspace(project as any);
+        if (!ws) return project;
+        await Project.findByIdAndUpdate(projectId, {
+          workspace: {
+            sandboxId: (ws as any).id,
+            ideUrl: (ws as any).url,
+            embedUrl: (ws as any).embed_url,
+            editUrl: (ws as any).editor_url
+          }
+        });
+        return await Project.findById(projectId);
+      }
+
+      // Ensure links are present and up-to-date
+      if (!project.workspace?.embedUrl || !project.workspace?.ideUrl) {
+        await Project.findByIdAndUpdate(projectId, {
+          workspace: {
+            sandboxId,
+            ideUrl: `https://codesandbox.io/p/sandbox/${sandboxId}`,
+            embedUrl: `https://codesandbox.io/p/sandbox/${sandboxId}?embed=1`,
+            editUrl: `https://codesandbox.io/p/sandbox/${sandboxId}`
+          }
+        });
+        return await Project.findById(projectId);
+      }
+
+      return project;
+    } catch (e) {
+      console.error('ensureWorkspace error:', e);
+      return project;
+    }
+  }
+
   async getProjects(query: ProjectQuery): Promise<{ projects: IProject[], total: number }> {
     try {
       const { search, status, difficulty, page = 1, limit = 10 } = query;

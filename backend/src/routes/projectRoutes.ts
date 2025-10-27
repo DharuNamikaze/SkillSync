@@ -25,5 +25,6 @@ router.put('/:id', validateProjectId, validateUpdateProject, projectController.u
 router.delete('/:id', validateProjectId, projectController.deleteProject);
 router.post('/:id/join', validateProjectId, projectController.joinProject);
 router.post('/:id/leave', validateProjectId, projectController.leaveProject);
+router.post('/:id/workspace/init', validateProjectId, projectController.initializeWorkspace);
 
 export default router;

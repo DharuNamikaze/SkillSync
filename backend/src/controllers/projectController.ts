@@ -238,4 +238,22 @@ export class ProjectController {
       next(error);
     }
   }
+
+  async initializeWorkspace(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const project = await projectService.ensureWorkspace(id);
+      if (!project) {
+        throw createError('Project not found', 404);
+      }
+      const response: ApiResponse = {
+        ok: true,
+        data: project,
+        message: 'Workspace initialized'
+      };
+      res.status(200).json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
