@@ -391,8 +391,8 @@ const ProjectWorkspace = () => {
             ) : (
               <div className="h-full flex items-center justify-center">
                 <Card>
-                  <CardContent className="p-6 text-center">
-                    <Eye className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <CardContent className="pt-6 text-center">
+                    <Eye className="w-12 h-12 text-muted-foreground mx-auto mb-2  " />
                     <h3 className="font-heading text-lg mb-2">Preview Unavailable</h3>
                     <p className="text-muted-foreground">
                       No running preview is available for this workspace yet.

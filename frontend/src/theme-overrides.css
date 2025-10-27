@@ -1,48 +1,22 @@
 /* Define theme variables */
 :root {
   --light-bg-primary: #ffffff;
-  --dark-bg-primary: #1a1a1a;
-  --dark-bg-secondary: #2d2d2d;
-  --dark-bg-hover: #333333;
-  --dark-text-primary: #e0e0e0;
-  --dark-text-secondary: #a0a0a0;
-  --dark-border: #3a3a3a;
-  --dark-accent: #3b82f6;
-  --dark-accent-muted: rgba(59, 130, 246, 0.5);
-  --dark-shadow: rgba(0, 0, 0, 0.3);
-}
-
-/* Map the project's token variables to dark-theme values so token-based
-   classes (like .bg-background, .text-foreground, .bg-main, etc.) update
-   automatically when the ThemeProvider adds the `dark-theme` class to
-   <html>. This keeps components consistent without sprinkling overrides. */
-.dark-theme {
-  --color-background: 17 24 39; /* slate-900 */
-  --color-foreground: 226 232 240; /* slate-200 */
-  --color-secondary-background: 30 30 30; /* slightly lighter surface */
-
-  --color-main: 59 130 246; /* blue-500 */
-  --color-main-foreground: 255 255 255;
-
-  --color-accent: 250 204 21; /* amber */
-  --color-accent-foreground: 23 23 23;
-
-  --color-muted: 55 65 81; /* gray-700 */
-  --color-muted-foreground: 148 163 184; /* gray-400 */
-
-  --color-border: 58 58 58; /* dark border */
-  --color-ring: 59 130 246; /* accent ring */
-
-  --radius-base: 0.75rem;
-  --shadow-shadow: 0 6px 12px rgba(0,0,0,0.45);
-  --shadow-nav: 0 6px 12px rgba(0,0,0,0.45);
-
-  --color-overlay: 0 0 0 / 0.6;
-
-  --boxShadowX: 4px;
-  --boxShadowY: 4px;
-  --reverseBoxShadowX: -4px;
-  --reverseBoxShadowY: -4px;
+  /* Primary background for dark theme: deep slate for better contrast */
+  --dark-bg-primary: #0b1220; /* very dark navy */
+  /* Secondary surface (cards, panels) */
+  --dark-bg-secondary: #0f1724; /* slightly lighter slate */
+  /* Hover/interactive surface */
+  --dark-bg-hover: #111827; /* slate-900 */
+  /* Primary and secondary text for dark surfaces */
+  --dark-text-primary: #e6f1f5; /* soft off-white */
+  --dark-text-secondary: #9aa6b2; /* muted descriptive text */
+  /* Borders and dividers */
+  --dark-border: #22303a; /* slate divider */
+  /* Accent color used for primary actions and active states (teal/cyan) */
+  --dark-accent: #06b6d4; /* cyan-400 */
+  --dark-accent-muted: rgba(6, 182, 212, 0.22);
+  /* Stronger shadow for contrast in dark */
+  --dark-shadow: rgba(2,6,23,0.7);
 }
 
 /* Theme overrides for background colors */
@@ -261,4 +235,74 @@
 
 .dark-theme .peer-focus\:ring-blue-300 {
   --tw-ring-color: var(--dark-accent-muted) !important;
+}
+
+/* Map project/neobrutalism token classes to dark variables so dark theme applies
+   across the app (sidebar, dashboard, projects) without modifying neobrutalism
+   source. Keep changes minimal and additive. */
+.dark-theme .bg-background {
+  background-color: var(--dark-bg-primary) !important;
+}
+
+.dark-theme .text-foreground {
+  color: var(--dark-text-primary) !important;
+}
+
+.dark-theme .text-muted-foreground,
+.dark-theme .text-gray-400,
+.dark-theme .text-gray-500,
+.dark-theme .text-gray-600 {
+  color: var(--dark-text-secondary) !important;
+}
+
+.dark-theme .border-border,
+.dark-theme .border {
+  border-color: var(--dark-border) !important;
+}
+
+.dark-theme .bg-secondary-background,
+.dark-theme .bg-secondary {
+  background-color: var(--dark-bg-secondary) !important;
+}
+
+/* Muted surfaces (cards, skeletons, small UI pieces) */
+.dark-theme .bg-muted {
+  background-color: rgba(255,255,255,0.03) !important;
+}
+.dark-theme .bg-muted\/50 {
+  background-color: rgba(255,255,255,0.04) !important;
+}
+
+/* Main (accent) color mapping so active sidebar/project items remain visible */
+.dark-theme .bg-main {
+  background-color: var(--dark-accent) !important;
+}
+.dark-theme .text-main-foreground {
+  color: #ffffff !important;
+}
+
+/* Outline and focus helpers used in components */
+.dark-theme .outline-border {
+  outline-color: var(--dark-border) !important;
+}
+
+/* Shadows (nav/sidebar) should be darker in dark mode */
+.dark-theme .shadow-nav,
+.dark-theme .shadow-shadow,
+.dark-theme .shadow-sm,
+.dark-theme .shadow-md {
+  box-shadow: 0 4px 12px var(--dark-shadow) !important;
+}
+
+/* Buttons and accent surfaces */
+.dark-theme .bg-accent,
+.dark-theme .bg-accent\/50 {
+  background-color: var(--dark-accent) !important;
+}
+
+/* Ensure modal/dialog and other overlays inherit dark backgrounds */
+.dark-theme .rounded-xl,
+.dark-theme .rounded-base,
+.dark-theme .rounded-lg {
+  background-clip: padding-box;
 }
