@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from "../AuthContext";
 import { Mail, Calendar, Github, Linkedin, ExternalLink, Edit3, Plus, Star, Clock, Users } from 'lucide-react';
 import { UsersAPI, SkillsAPI, ProjectsAPI } from "../lib/api";
+import AddSkillModal from './AddSkillModal';
 
 const Profile = () => {
-  const [isEditing, setIsEditing] = useState(false);
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
+  const [isAddSkillModalOpen, setIsAddSkillModalOpen] = useState(false);
   const { user } = useAuth();
 
   const [profile, setProfile] = useState(null);
@@ -56,20 +59,20 @@ const Profile = () => {
 
   const getSkillColor = (level) => {
     const colors = {
-      'Expert': 'bg-green-100 text-green-800 border-green-200',
-      'Advanced': 'bg-blue-100 text-blue-800 border-blue-200',
-      'Intermediate': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      'Beginner': 'bg-gray-100 text-gray-800 border-gray-200'
+      'Expert': 'bg-green-100/80 text-green-700 border-green-200',
+      'Advanced': 'bg-blue-100/80 text-blue-700 border-blue-200',
+      'Intermediate': 'bg-amber-100/80 text-amber-700 border-amber-200',
+      'Beginner': 'bg-slate-100/80 text-slate-700 border-slate-200'
     };
     return colors[level] || colors['Beginner'];
   };
 
   const getStatusColor = (status) => {
     const colors = {
-      'Active': 'bg-green-100 text-green-800',
-      'Completed': 'bg-blue-100 text-blue-800',
-      'In Progress': 'bg-orange-100 text-orange-800',
-      'On Hold': 'bg-gray-100 text-gray-800'
+      'Active': 'bg-green-100/80 text-green-700',
+      'Completed': 'bg-blue-100/80 text-blue-700',
+      'In Progress': 'bg-amber-100/80 text-amber-700',
+      'On Hold': 'bg-slate-100/80 text-slate-700'
     };
     return colors[status] || colors['Active'];
   };
@@ -95,35 +98,40 @@ const Profile = () => {
   );
 
   const ProjectCard = ({ project }) => (
-    <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-1">
-      <div className="flex justify-between items-start mb-3">
-        <h4 className="text-lg font-semibold text-gray-900">{project.name}</h4>
-        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
+    <div className="group bg-white rounded-2xl p-6 border-2 border-border shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <h4 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{project.name}</h4>
+          <p className="text-gray-600 mt-1">{project.role}</p>
+        </div>
+        <span className={`px-4 py-1.5 rounded-xl text-sm font-medium ${getStatusColor(project.status)}`}>
           {project.status}
         </span>
       </div>
 
-      <p className="text-gray-600 text-sm mb-3">{project.role}</p>
-      <p className="text-gray-700 mb-4">{project.description}</p>
+      <p className="text-gray-700 mb-6">{project.description}</p>
 
-      <div className="flex flex-wrap gap-2 mb-4">
+      <div className="flex flex-wrap gap-2 mb-6">
         {(project.technologies || []).map(tech => (
-          <span key={tech} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-md">
+          <span 
+            key={tech} 
+            className="px-3 py-1.5 bg-gray-100 text-gray-800 text-sm rounded-lg font-medium hover:bg-gray-200 transition-colors"
+          >
             {tech}
           </span>
         ))}
       </div>
 
-      <div className="flex items-center justify-between text-sm text-gray-500">
-        <div className="flex items-center space-x-4">
-          <span className="flex items-center space-x-1">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <span className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
             <Calendar className="w-4 h-4" />
             <span>{project.startDate}</span>
           </span>
         </div>
-        <button className="flex items-center space-x-1 text-blue-600 hover:text-blue-700">
+        <button className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl font-medium hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors">
           <ExternalLink className="w-4 h-4" />
-          <span>View</span>
+          <span>View Project</span>
         </button>
       </div>
     </div>
@@ -133,48 +141,61 @@ const Profile = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-6 rounded-2xl">
       <div className="max-w-6xl mx-auto space-y-8">
         {/* Header Section */}
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
-          <div className="h-32 bg-gradient-to-r from-blue-500 to-purple-600"></div>
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden border-2 border-border hover:shadow-xl transition-shadow duration-300">
+          <div className="h-48 bg-gradient-to-r from-main via-purple-600 to-blue-600 relative">
+            <div className="absolute inset-0 bg-grid-white/10"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+          </div>
           <div className="px-8 pb-8">
-            <div className="flex flex-col sm:flex-row items-start sm:items-end space-y-4 sm:space-y-0 sm:space-x-6 -mt-16">
-              <img
-                src={userData.avatar}
-                alt={userData.name}
-                className="w-32 h-32 rounded-2xl border-4 border-white shadow-xl object-cover"
-              />
-              <div className="flex-1 pt-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-end space-y-4 sm:space-y-0 sm:space-x-6 -mt-24">
+              <div className="relative group">
+                <img
+                  src={userData.avatar}
+                  alt={userData.name}
+                  className="w-40 h-40 rounded-2xl border-4 border-white shadow-xl object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+              </div>
+              <div className="flex-1">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h1 className="text-3xl font-bold text-gray-900">{userData.name}</h1>
-                    <p className="text-xl text-gray-600 mb-3">{userData.title}</p>
-                    <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 mb-4">
-                      <span className="flex items-center space-x-1">
-                        <Mail className="w-4 h-4" />
-                        <span>{userData.email}</span>
-                      </span>
-                      <span className="flex items-center space-x-1">
-                        <Calendar className="w-4 h-4" />
-                        <span>Joined {userData.joinDate}</span>
-                      </span>
+                    <h1 className="text-4xl font-bold text-gray-900">
+                      {userData.name}
+                    </h1>
+                    <p className="text-xl text-gray-600 mt-2">{userData.title}</p>
+                    <div className="mt-6 flex flex-wrap items-center gap-4">
+                      <div className="flex items-center bg-gray-50 px-4 py-2 rounded-xl shadow-sm">
+                        <Mail className="w-5 h-5 text-gray-500 mr-2" />
+                        <span className="text-gray-800">{userData.email}</span>
+                      </div>
+                      <div className="flex items-center bg-gray-50 px-4 py-2 rounded-xl shadow-sm">
+                        <Calendar className="w-5 h-5 text-gray-500 mr-2" />
+                        <span className="text-gray-800">Joined {userData.joinDate}</span>
+                      </div>
                     </div>
-                    <p className="text-gray-700 max-w-2xl">{userData.bio}</p>
+                    <p className="text-gray-700 max-w-2xl mt-6 leading-relaxed">{userData.bio}</p>
                   </div>
-                  <button
-                    onClick={() => setIsEditing(!isEditing)}
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  <Link
+                    to="/profile/edit"
+                    className="flex items-center gap-2 px-6 py-2.5 bg-main text-white rounded-xl hover:bg-main/90 transition-colors font-semibold shadow-lg hover:shadow-main/25"
                   >
                     <Edit3 className="w-4 h-4" />
                     <span>Edit Profile</span>
-                  </button>
+                  </Link>
                 </div>
 
                 {/* Social Links */}
                 <div className="flex space-x-4 mt-4">
-                  <a href={userData.socialLinks.github} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
-                    <Github className="w-5 h-5 text-gray-600" />
+                  <a 
+                    href={userData.socialLinks.github} 
+                    className="p-2 bg-white dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-700 group"
+                  >
+                    <Github className="w-5 h-5 text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
                   </a>
-                  <a href={userData.socialLinks.linkedin} className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
-                    <Linkedin className="w-5 h-5 text-gray-600" />
+                  <a 
+                    href={userData.socialLinks.linkedin} 
+                    className="p-2 bg-white dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-700 group"
+                  >
+                    <Linkedin className="w-5 h-5 text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
                   </a>
                 </div>
               </div>
@@ -184,43 +205,60 @@ const Profile = () => {
 
         {/* Stats Section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <StatCard
-            icon={Star}
-            label="Projects Completed"
-            value={userData.stats.projectsCompleted}
-            color="green"
-          />
-          <StatCard
-            icon={Github}
-            label="Total Commits"
-            value={userData.stats.totalCommits.toLocaleString()}
-            color="purple"
-          />
-          <StatCard
-            icon={Clock}
-            label="Years Experience"
-            value={userData.stats.yearsExperience}
-            color="blue"
-          />
+          <div className="bg-white rounded-2xl p-6 border-2 border-border shadow-sm hover:shadow-xl transition-all duration-300 group">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-green-100 text-green-600 group-hover:scale-110 transition-transform duration-300">
+                <Star className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 font-medium">Projects Completed</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{userData.stats.projectsCompleted}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl p-6 border-2 border-border shadow-sm hover:shadow-xl transition-all duration-300 group">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-purple-100 text-purple-600 group-hover:scale-110 transition-transform duration-300">
+                <Github className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 font-medium">Total Commits</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{userData.stats.totalCommits.toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl p-6 border-2 border-border shadow-sm hover:shadow-xl transition-all duration-300 group">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-blue-100 text-blue-600 group-hover:scale-110 transition-transform duration-300">
+                <Clock className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 font-medium">Years Experience</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{userData.stats.yearsExperience}</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-          <div className="border-b border-gray-200">
-            <nav className="flex space-x-8 px-8">
+        <div className="bg-white rounded-2xl shadow-lg border-2 border-border">
+          <div className="border-b-2 border-border">
+            <nav className="flex space-x-1 p-2">
               {[
-                { id: 'overview', label: 'Overview' },
-                { id: 'projects', label: 'Projects' },
-                { id: 'skills', label: 'Skills' }
+                { id: 'overview', label: 'Overview', icon: Users },
+                { id: 'projects', label: 'Projects', icon: Star },
+                { id: 'skills', label: 'Skills', icon: Clock }
               ].map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={` py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
+                  className={`flex items-center gap-2 py-2.5 px-4 rounded-xl font-medium text-sm transition-all duration-300 ${
+                    activeTab === tab.id
+                      ? 'bg-blue-600 text-white shadow-lg'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
                 >
+                  <tab.icon className="w-4 h-4" />
                   {tab.label}
                 </button>
               ))}
@@ -273,21 +311,33 @@ const Profile = () => {
               <div>
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-xl font-semibold text-gray-900">Skills & Technologies</h3>
-                  <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                  <button
+                    onClick={() => setIsAddSkillModalOpen(true)}
+                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
                     <Plus className="w-4 h-4" />
                     <span>Add Skill</span>
                   </button>
                 </div>
                 <div className="space-y-8">
                   {Object.entries(groupedSkills).map(([category, skills]) => (
-                    <div key={category}>
-                      <h4 className="text-lg font-medium text-gray-900 mb-4">{category}</h4>
+                    <div key={category} className="group">
+                      <h4 className="text-xl font-bold text-gray-900 mb-6">
+                        {category}
+                      </h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {skills.map(skill => (
-                          <div key={skill.name} className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
+                          <div 
+                            key={skill.name} 
+                            className="group bg-white rounded-2xl p-6 border-2 border-gray-200 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                          >
                             <div className="flex justify-between items-center">
-                              <span className="font-medium text-gray-900">{skill.name}</span>
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getSkillColor(skill.level)}`}>
+                              <div className="flex-1">
+                                <span className="font-semibold text-lg text-gray-900 group-hover:text-blue-600 transition-colors">
+                                  {skill.name}
+                                </span>
+                              </div>
+                              <span className={`ml-4 px-3 py-1.5 rounded-xl text-sm font-medium ${getSkillColor(skill.level)}`}>
                                 {skill.level}
                               </span>
                             </div>
@@ -301,6 +351,18 @@ const Profile = () => {
             )}
           </div>
         </div>
+
+        {/* Add Skill Modal */}
+        <AddSkillModal
+          isOpen={isAddSkillModalOpen}
+          onClose={() => setIsAddSkillModalOpen(false)}
+          onSkillAdded={(newSkill) => {
+            // Update skills list with the new skill
+            setSkills(prev => [...prev, newSkill]);
+            // Show success message
+            alert('Skill added successfully!');
+          }}
+        />
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Projects from "./components/Projects";
 import Notifications from "./components/Notifications";
 import Profile from "./components/Profile";
+import EditProfile from "./components/EditProfile";
 import Settings from "./components/Settings";
 import Messages from "./components/Messages";
 import Dashboard from "./components/Dashboard";
@@ -83,6 +84,14 @@ function App() {
             <RequireAuth>
               <Layout>
                 <Profile />
+              </Layout>
+            </RequireAuth>
+          } />
+          
+          <Route path="/profile/edit" element={
+            <RequireAuth>
+              <Layout>
+                <EditProfile />
               </Layout>
             </RequireAuth>
           } />

@@ -24,7 +24,7 @@ function Settings() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("profile");
+  const [activeTab, setActiveTab] = useState("notifications");
   const [formData, setFormData] = useState({});
   const [unsavedChanges, setUnsavedChanges] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -148,13 +148,7 @@ function Settings() {
           <div className="w-full md:w-64 shrink-0">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden sticky top-6">
               <nav className="flex flex-col">
-                <button 
-                  onClick={() => setActiveTab("profile")} 
-                  className={`flex items-center space-x-3 px-4 py-3 text-left ${activeTab === "profile" ? "bg-blue-50 text-blue-700 border-l-4 border-blue-500" : "text-gray-700 hover:bg-gray-50"}`}
-                >
-                  <User className="w-5 h-5" />
-                  <span className="font-medium">Profile</span>
-                </button>
+
                 <button 
                   onClick={() => setActiveTab("notifications")} 
                   className={`flex items-center space-x-3 px-4 py-3 text-left ${activeTab === "notifications" ? "bg-blue-50 text-blue-700 border-l-4 border-blue-500" : "text-gray-700 hover:bg-gray-50"}`}
@@ -198,115 +192,7 @@ function Settings() {
           <div className="flex-1">
             <form onSubmit={handleSubmit}>
               <div className="space-y-6">
-                {/* Profile Settings */}
-                {activeTab === "profile" && (
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-gray-100">
-                      <h2 className="font-semibold text-xl text-gray-900">Profile Information</h2>
-                      <p className="text-gray-500 text-sm mt-1">Update your personal information and public profile</p>
-                    </div>
-                    <div className="p-6 space-y-6">
-                      {/* Avatar */}
-                      <div className="flex items-center space-x-4">
-                        <img 
-                          src={userData.avatar} 
-                          alt={userData.name} 
-                          className="h-16 w-16 rounded-full"
-                        />
-                        <div>
-                          <button type="button" className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-md text-sm font-medium hover:bg-blue-100 transition-colors">
-                            Change Avatar
-                          </button>
-                          <p className="text-xs text-gray-500 mt-1">JPG, GIF or PNG. 1MB max.</p>
-                        </div>
-                      </div>
 
-                      {/* Basic Info */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                            Full Name
-                          </label>
-                          <input
-                            type="text"
-                            id="name"
-                            className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                            value={formData.name || ''}
-                            onChange={(e) => handleDirectFieldChange('name', e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                            Email Address
-                          </label>
-                          <input
-                            type="email"
-                            id="email"
-                            className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                            value={formData.email || ''}
-                            onChange={(e) => handleDirectFieldChange('email', e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
-                            Role/Title
-                          </label>
-                          <input
-                            type="text"
-                            id="role"
-                            className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                            value={formData.role || ''}
-                            onChange={(e) => handleDirectFieldChange('role', e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
-                            Location
-                          </label>
-                          <input
-                            type="text"
-                            id="location"
-                            className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                            value={formData.location || ''}
-                            onChange={(e) => handleDirectFieldChange('location', e.target.value)}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Bio */}
-                      <div>
-                        <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-1">
-                          Bio
-                        </label>
-                        <textarea
-                          id="bio"
-                          rows="4"
-                          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                          placeholder="Tell us about yourself"
-                          value={formData.bio || ''}
-                          onChange={(e) => handleDirectFieldChange('bio', e.target.value)}
-                        ></textarea>
-                        <p className="text-xs text-gray-500 mt-1">Brief description for your profile.</p>
-                      </div>
-
-                      {/* Skills */}
-                      <div>
-                        <label htmlFor="skills" className="block text-sm font-medium text-gray-700 mb-1">
-                          Skills
-                        </label>
-                        <input
-                          type="text"
-                          id="skills"
-                          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                          placeholder="e.g. React, Node.js, UI Design"
-                          value={formData.skills ? formData.skills.join(', ') : ''}
-                          onChange={(e) => handleDirectFieldChange('skills', e.target.value.split(',').map(skill => skill.trim()))}
-                        />
-                        <p className="text-xs text-gray-500 mt-1">Separate skills with commas</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 {/* Notification Settings */}
                 {activeTab === "notifications" && (
