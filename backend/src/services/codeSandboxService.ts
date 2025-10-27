@@ -42,13 +42,20 @@ export class CodeSandboxService {
         metadata: { projectName: projectData.name }
       } as any);
 
+      // Ensure visibility is public for embedding
+      try {
+        await (this.sdk as any).sandboxes.update(sandbox.id, { visibility: 'public' });
+      } catch (e) {
+        // ignore if plan/org forbids update; embed might still work if default is public/unlisted
+      }
+
       // Return basic links we use on the frontend
       return {
         id: sandbox.id,
-        url: `https://codesandbox.io/s/${sandbox.id}`,
-        embed_url: `https://codesandbox.io/embed/${sandbox.id}?view=editor`,
-        editor_url: `https://codesandbox.io/s/${sandbox.id}`,
-        preview_url: `https://codesandbox.io/embed/${sandbox.id}?view=preview`
+        url: `https://codesandbox.io/p/sandbox/${sandbox.id}`,
+        embed_url: `https://codesandbox.io/p/sandbox/${sandbox.id}?embed=1`,
+        editor_url: `https://codesandbox.io/p/sandbox/${sandbox.id}`,
+        preview_url: `https://codesandbox.io/p/sandbox/${sandbox.id}?embed=1&view=preview`
       };
     } catch (error) {
       console.error('CodeSandbox creation error:', error);

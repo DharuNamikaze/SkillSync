@@ -209,10 +209,9 @@ const ProjectWorkspace = () => {
 
   // Derive embed URLs for editor and preview
   const embedEditorUrl = project?.workspace?.embedUrl 
-    || (project?.workspace?.sandboxId ? `https://codesandbox.io/embed/${project.workspace.sandboxId}?view=editor` : null);
-  const embedPreviewUrl = project?.workspace?.embedUrl 
-    ? project.workspace.embedUrl.replace('view=editor', 'view=preview') 
-    : (project?.workspace?.sandboxId ? `https://codesandbox.io/embed/${project.workspace.sandboxId}?view=preview` : null);
+    || (project?.workspace?.sandboxId ? `https://codesandbox.io/p/sandbox/${project.workspace.sandboxId}?embed=1` : null);
+  const embedPreviewUrl = project?.workspace?.previewUrl 
+    || (project?.workspace?.sandboxId ? `https://codesandbox.io/p/sandbox/${project.workspace.sandboxId}?embed=1&view=preview` : embedEditorUrl);
 
   return (
     <div className={`${isFullscreen ? 'fixed inset-0 z-50' : 'min-h-screen'} bg-background`}>
@@ -358,7 +357,7 @@ const ProjectWorkspace = () => {
                 title="CodeSandbox Editor"
                 src={embedEditorUrl}
                 className="w-full h-full bg-white"
-                allow="accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; vr; xr-spatial-tracking"
+                allow="accelerometer; camera; encrypted-media; geolocation; gyroscope; microphone; midi; clipboard-read; clipboard-write; fullscreen; display-capture"
                 sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
               />
             ) : (
@@ -378,14 +377,14 @@ const ProjectWorkspace = () => {
         )}
 
         {activeTab === 'preview' && (
-          <div className="h-full">
+          <div className="h-screen">
             {embedPreviewUrl ? (
               <iframe
                 ref={previewFrameRef}
                 title="CodeSandbox Preview"
                 src={embedPreviewUrl}
-                className="w-full h-full bg-white"
-                allow="accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; vr; xr-spatial-tracking"
+                className="w-full h-screen bg-white"
+                allow="accelerometer; camera; encrypted-media; geolocation; gyroscope; microphone; midi; clipboard-read; clipboard-write; fullscreen; display-capture"
                 sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
               />
             ) : (
