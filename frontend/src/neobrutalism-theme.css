@@ -1,0 +1,173 @@
+/* Neobrutalism Theme Variables */
+:root {
+  /* Color palette */
+  --color-main: #88aaee;
+  --color-main-foreground: #000000;
+  --color-secondary: #ffc524;
+  --color-secondary-background: #ffc524;
+  --color-secondary-foreground: #000000;
+  --color-accent: #a8e6cf;
+  --color-accent-foreground: #000000;
+  --color-destructive: #ff6b6b;
+  --color-destructive-foreground: #000000;
+  --color-muted: #f0f0f0;
+  --color-muted-foreground: #6b7280;
+  
+  /* Base colors */
+  --color-background: #ffffff;
+  --color-foreground: #000000;
+  --color-border: #000000;
+  
+  /* Shadow and spacing */
+  --shadow: 4px 4px 0px 0px #000000;
+  --shadow-input: 2px 2px 0px 0px #000000;
+  --box-shadow-x: 4px;
+  --box-shadow-y: 4px;
+  --reverse-box-shadow-x: -4px;
+  --reverse-box-shadow-y: -4px;
+  
+  /* Border radius */
+  --radius-base: 8px;
+  --radius-sm: 4px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  
+  /* Typography */
+  --font-heading: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-base: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Dark mode */
+.dark {
+  --color-background: #000000;
+  --color-foreground: #ffffff;
+  --color-main: #6366f1;
+  --color-main-foreground: #ffffff;
+  --color-secondary: #fbbf24;
+  --color-secondary-background: #fbbf24;
+  --color-secondary-foreground: #000000;
+  --color-muted: #1f2937;
+  --color-muted-foreground: #9ca3af;
+  --color-border: #ffffff;
+  --shadow: 4px 4px 0px 0px #ffffff;
+  --shadow-input: 2px 2px 0px 0px #ffffff;
+}
+
+/* Global styles */
+* {
+  border-color: var(--color-border);
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* CSS Custom Properties for Tailwind */
+@layer base {
+  :root {
+    --main: 136 170 238;
+    --main-foreground: 0 0 0;
+    --secondary: 255 197 36;
+    --secondary-background: 255 197 36;
+    --secondary-foreground: 0 0 0;
+    --accent: 168 230 207;
+    --accent-foreground: 0 0 0;
+    --destructive: 255 107 107;
+    --destructive-foreground: 0 0 0;
+    --muted: 240 240 240;
+    --muted-foreground: 107 114 128;
+    --background: 255 255 255;
+    --foreground: 0 0 0;
+    --border: 0 0 0;
+    --ring: 0 0 0;
+  }
+
+  .dark {
+    --main: 99 102 241;
+    --main-foreground: 255 255 255;
+    --secondary: 251 191 36;
+    --secondary-background: 251 191 36;
+    --secondary-foreground: 0 0 0;
+    --accent: 168 230 207;
+    --accent-foreground: 0 0 0;
+    --destructive: 239 68 68;
+    --destructive-foreground: 255 255 255;
+    --muted: 31 41 55;
+    --muted-foreground: 156 163 175;
+    --background: 0 0 0;
+    --foreground: 255 255 255;
+    --border: 255 255 255;
+    --ring: 255 255 255;
+  }
+}
+
+/* Utility classes */
+.shadow-shadow {
+  box-shadow: var(--shadow);
+}
+
+.shadow-input {
+  box-shadow: var(--shadow-input);
+}
+
+.rounded-base {
+  border-radius: var(--radius-base);
+}
+
+.font-heading {
+  font-family: var(--font-heading);
+  font-weight: 700;
+}
+
+.font-base {
+  font-family: var(--font-base);
+  font-weight: 500;
+}
+
+/* Hover effects */
+.hover-lift:hover {
+  transform: translate(var(--box-shadow-x), var(--box-shadow-y));
+  box-shadow: none;
+  transition: all 0.2s ease;
+}
+
+.hover-lift-reverse:hover {
+  transform: translate(var(--reverse-box-shadow-x), var(--reverse-box-shadow-y));
+  box-shadow: var(--shadow);
+  transition: all 0.2s ease;
+}
+
+
+/* Animation keyframes */
+@keyframes bounce-in {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Focus styles */
+.focus-neobrutalism:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-main);
+  border-color: var(--color-main);
+}

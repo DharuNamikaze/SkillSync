@@ -1,0 +1,115 @@
+/* Neobrutalism theme preset (project-wide). When you confirm the official package, we will swap to its Provider. */
+@theme {
+  /* Core surface + text */
+  --color-background: 250 250 250; /* near-white */
+  --color-foreground: 23 23 23;     /* near-black */
+  --color-secondary-background: 240 240 240; /* light gray */
+
+  /* Brand (main) */
+  --color-main: 37 99 235;           /* blue-600 */
+  --color-main-foreground: 255 255 255;
+
+  /* Accent + muted tokens for components */
+  --color-accent: 250 204 21;         /* amber-400 */
+  --color-accent-foreground: 23 23 23;
+  --color-muted: 229 231 235;         /* gray-200 */
+  --color-muted-foreground: 82 82 82; /* gray-600 */
+
+  /* Borders / ring */
+  --color-border: 0 0 0;              /* black */
+  --color-ring: 0 0 0;                /* black */
+
+  /* Radii / shadows */
+  --radius-base: 0.75rem;
+  --shadow-shadow: 4px 4px 0 0 rgb(0 0 0);
+  --shadow-nav: 4px 4px 0 0 rgb(0 0 0);
+
+  /* Overlay */
+  --color-overlay: 0 0 0 / 0.4;
+
+  /* Hover offsets used by components */
+  --boxShadowX: 4px;
+  --boxShadowY: 4px;
+  --reverseBoxShadowX: -4px;
+  --reverseBoxShadowY: -4px;
+}
+
+/* Ensure variables exist at runtime even if @theme is not processed */
+:root {
+  --color-background: 250 250 250;
+  --color-foreground: 23 23 23;
+  --color-secondary-background: 240 240 240;
+  --color-main: 37 99 235;
+  --color-main-foreground: 255 255 255;
+  --color-accent: 250 204 21;
+  --color-accent-foreground: 23 23 23;
+  --color-muted: 229 231 235;
+  --color-muted-foreground: 82 82 82;
+  --color-border: 0 0 0;
+  --color-ring: 0 0 0;
+  --radius-base: 0.75rem;
+  --shadow-shadow: 4px 4px 0 0 rgb(0 0 0);
+  --shadow-nav: 4px 4px 0 0 rgb(0 0 0);
+  --color-overlay: 0 0 0 / 0.4;
+  --boxShadowX: 4px;
+  --boxShadowY: 4px;
+  --reverseBoxShadowX: -4px;
+  --reverseBoxShadowY: -4px;
+}
+
+/* Global document colors */
+:root, html, body { 
+  background-color: rgb(var(--color-background)); 
+  color: rgb(var(--color-foreground));
+}
+::selection { background: rgb(var(--color-main)); color: rgb(var(--color-main-foreground)); }
+
+/* Token class mappings used across components */
+.bg-background { background-color: rgb(var(--color-background)); }
+.bg-secondary-background { background-color: rgb(var(--color-secondary-background)); }
+.bg-main { background-color: rgb(var(--color-main)); }
+.text-main-foreground { color: rgb(var(--color-main-foreground)); }
+.text-foreground { color: rgb(var(--color-foreground)); }
+.border-border { border-color: rgb(var(--color-border)); }
+.ring-ring { --tw-ring-color: rgb(var(--color-ring)); }
+.rounded-base { border-radius: var(--radius-base); }
+.shadow-shadow { box-shadow: var(--shadow-shadow); }
+.shadow-nav { box-shadow: var(--shadow-nav); }
+.bg-overlay { background: color-mix(in oklab, black 40%, transparent); }
+
+/* Additional helpers some pages already use */
+.bg-muted { background-color: rgb(var(--color-muted)); }
+.text-muted-foreground { color: rgb(var(--color-muted-foreground)); }
+.bg-accent { background-color: rgb(var(--color-accent)); }
+.text-accent-foreground { color: rgb(var(--color-accent-foreground)); }
+
+/* Sidebar gap helper for inset/floating variants */
+.group[data-variant="inset"] .bg-sidebar { background-color: rgb(var(--color-background)); }
+
+/* --- Smooth mobile sidebar (Sheet) animation without Tailwind animate utilities --- */
+[data-slot="sheet-overlay"] { will-change: opacity; backface-visibility: hidden; transform: translateZ(0); }
+[data-slot="sheet-overlay"][data-state="open"] { opacity: 1; transition: opacity 240ms ease-out; }
+[data-slot="sheet-overlay"][data-state="closed"] { opacity: 0; transition: opacity 200ms ease-in; }
+
+/* Slide from left */
+/* Baseline ensures transform animates from off-screen even on first mount */
+[data-slot="sheet-content"][data-side="left"] {
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translate3d(-100%, 0, 0);
+  transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  contain: layout paint;
+}
+[data-slot="sheet-content"][data-side="left"][data-state="open"] { transform: translate3d(0, 0, 0); }
+[data-slot="sheet-content"][data-side="left"][data-state="closed"] { transform: translate3d(-100%, 0, 0); }
+
+/* Slide from right (in case used) */
+[data-slot="sheet-content"][data-side="right"] {
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translate3d(100%, 0, 0);
+  transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  contain: layout paint;
+}
+[data-slot="sheet-content"][data-side="right"][data-state="open"] { transform: translate3d(0, 0, 0); }
+[data-slot="sheet-content"][data-side="right"][data-state="closed"] { transform: translate3d(100%, 0, 0); }
