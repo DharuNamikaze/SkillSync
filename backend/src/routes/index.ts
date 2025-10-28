@@ -5,7 +5,7 @@ import projectRoutes from './projectRoutes';
 import notificationRoutes from './notificationRoutes';
 import dashboardRoutes from './dashboardRoutes';
 import authRoutes from './authRoutes';
-
+import projectChatRoutes from '../routes/projectChatRoutes';
 const router = Router();
 
 // Health check
@@ -22,6 +22,7 @@ router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
 router.use('/skills', skillRoutes);
 router.use('/projects', projectRoutes);
+router.use('/projects', projectChatRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/dashboard', dashboardRoutes);
 

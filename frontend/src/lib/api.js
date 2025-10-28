@@ -3,7 +3,7 @@
 
 import { getAuthToken } from "../auth";
 
-export const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+export const API_BASE = "http://192.168.8.245:3001/api"; // import.meta.env.VITE_API_URL ||
 
 function buildQuery(params) {
   if (!params) return "";

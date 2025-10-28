@@ -116,7 +116,21 @@ const ProjectWorkspace = () => {
         throw new Error('Not a member');
       }
       
-      setProject(response.data);
+    setProject(response.data);
+      // Ensure workspace exists and is public
+      try {
+        const initRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://192.168.8.245:3001/api'}/projects/${projectId}/workspace/init`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('skillsync_token') || ''}` }
+        });
+        if (initRes.ok) {
+          const data = await initRes.json();
+          setProject(data.data);
+        }
+      } catch (e) {
+        console.warn('Workspace init skipped:', e);
+      }
+
       // Set initial collaborator list with current user
       setCollaborators([{
         id: user.id,
@@ -342,7 +356,7 @@ const ProjectWorkspace = () => {
             className="flex items-center gap-2"
           >
             <MessageSquare className="w-4 h-4" />
-            Team Chat
+            Team Chat--
           </Button>
         </div>
       </div>

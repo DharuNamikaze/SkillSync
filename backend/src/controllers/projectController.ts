@@ -66,6 +66,7 @@ export class ProjectController {
       if (!project) {
         throw createError('Project not found', 404);
       }
+      console.log('--->');
 
       const response: ApiResponse = {
         ok: true,
