@@ -49,6 +49,9 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
   }
 };
 
+// Alias for requireAuth (for backward compatibility)
+export const authenticate = requireAuth;
+
 // Legacy auth middleware - will be deprecated in favor of requireAuth
 export const authenticateToken = async (req: Request, res: Response, next: NextFunction) => {
   try {

@@ -2,12 +2,24 @@ import { Request, Response, NextFunction } from 'express';
 import { NotificationService } from '../services/notificationService';
 import { AuthRequest, ApiResponse, PaginatedResponse, NotificationQuery } from '../types';
 import { createError } from '../middleware/errorHandler';
+import { WebSocketService } from '../services/webSocketService';
 
 const notificationService = new NotificationService();
+
+// Helper to get WebSocket service from app instance
+function getWsService(req: Request): WebSocketService | undefined {
+  return req.app.get('wsService');
+}
 
 export class NotificationController {
   async getUserNotifications(req: Request, res: Response, next: NextFunction) {
     try {
+      // Inject WebSocket service if available
+      const wsService = getWsService(req);
+      if (wsService) {
+        notificationService.setWebSocketService(wsService);
+      }
+
       const userId = (req as AuthRequest).user?.id;
       if (!userId) {
         throw createError('User ID not found', 401);
@@ -151,6 +163,49 @@ export class NotificationController {
         ok: true,
         data: { count },
         message: 'Unread count retrieved successfully'
+      };
+      
+      res.status(200).json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async markProjectMessagesAsRead(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as AuthRequest).user?.id;
+      if (!userId) {
+        throw createError('User ID not found', 401);
+      }
+
+      const { projectId } = req.params;
+      const count = await notificationService.markProjectMessagesAsRead(userId, projectId);
+      
+      const response: ApiResponse = {
+        ok: true,
+        data: { count },
+        message: `${count} project message notifications marked as read`
+      };
+      
+      res.status(200).json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getUnreadCountsByProject(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as AuthRequest).user?.id;
+      if (!userId) {
+        throw createError('User ID not found', 401);
+      }
+
+      const counts = await notificationService.getUnreadCountsByProject(userId);
+      
+      const response: ApiResponse = {
+        ok: true,
+        data: counts,
+        message: 'Unread counts by project retrieved successfully'
       };
       
       res.status(200).json(response);

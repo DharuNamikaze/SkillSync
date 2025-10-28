@@ -17,16 +17,6 @@ router.get('/health', (req, res) => {
   });
 });
 
-// Route debugging middleware
-router.use((req, res, next) => {
-  console.log('Main router hit:', {
-    path: req.path,
-    baseUrl: req.baseUrl,
-    originalUrl: req.originalUrl
-  });
-  next();
-});
-
 // API routes
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);

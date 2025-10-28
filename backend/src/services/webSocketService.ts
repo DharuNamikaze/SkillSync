@@ -2,9 +2,12 @@ import { Server as HTTPServer } from 'http';
 import { Server, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
+import Project from '../models/Project';
 import { ProjectChatService } from './projectChatService';
+import { NotificationService } from './notificationService';
 
 const projectChatService = new ProjectChatService();
+const notificationService = new NotificationService();
 
 interface SocketData {
   userName?: string;
@@ -76,13 +79,12 @@ export class WebSocketService {
 
   private setupEventHandlers() {
     this.io.on('connection', (socket: AuthenticatedSocket) => {
-      console.log(`✅ User connected: ${socket.userId}`);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`User connected: ${socket.userId}`);
+      }
 
       if (socket.userId) {
         this.userSockets.set(socket.userId, socket.id);
-        console.log(`📋 Registered user socket: ${socket.userId} -> ${socket.id}`);
-        console.log(`📋 Total connected users: ${this.userSockets.size}`);
-        console.log(`📋 All connected user IDs:`, Array.from(this.userSockets.keys()));
       }
 
       // Join project rooms
@@ -96,8 +98,6 @@ export class WebSocketService {
           this.projectRooms.set(data.projectId, new Set());
         }
         this.projectRooms.get(data.projectId)?.add(socket.userId);
-        
-        console.log(`User ${socket.userId} joined project ${data.projectId}`);
         
         // Notify other members
         socket.to(roomName).emit('user_joined_project', {
@@ -154,11 +154,68 @@ export class WebSocketService {
             codeBlock: (message as any).codeBlock
           };
           
-          console.log('Broadcasting project message to room:', `project:${data.projectId}`, transformed);
 
           // Broadcast to all members in project room
           const roomName = `project:${data.projectId}`;
           this.io.to(roomName).emit('new_project_message', transformed);
+
+          // Send notification to ALL project members (not just those in room)
+          try {
+            const project = await Project.findById(data.projectId).select('members.userIds name').lean();
+            
+            if (project && project.members?.userIds) {
+              const allProjectMembers = project.members.userIds;
+              const messagePreview = data.content.length > 100 
+                ? data.content.substring(0, 100) + '...' 
+                : data.content;
+              
+              // Set WebSocket service for notifications
+              notificationService.setWebSocketService(this);
+              
+              for (const userId of allProjectMembers) {
+                // Don't send notification to sender
+                if (userId !== socket.userId) {
+                  const userSocketId = this.userSockets.get(userId);
+                  
+                  const notificationPayload = {
+                    type: 'new_message',
+                    title: 'New Message',
+                    message: messagePreview,
+                    projectId: data.projectId,
+                    sender: {
+                      id: socket.userId,
+                      name: socket.data?.userName || 'Unknown User',
+                      avatar: socket.data?.userAvatar
+                    },
+                    actionUrl: `/messages?project=${data.projectId}`,
+                    timestamp: transformed.timestamp
+                  };
+                  
+                  // Send real-time notification if user is online
+                  if (userSocketId) {
+                    this.io.to(userSocketId).emit('notification', notificationPayload);
+                  }
+                  
+                  // Store notification in database for Notifications page
+                  try {
+                    await notificationService.createMessageNotification(
+                      userId,
+                      data.projectId,
+                      project.name || 'Project',
+                      socket.userId!,
+                      socket.data?.userName || 'Unknown User',
+                      messagePreview,
+                      socket.data?.userAvatar
+                    );
+                  } catch (dbError) {
+                    console.error('Error storing notification in database:', dbError);
+                  }
+                }
+              }
+            }
+          } catch (notificationError) {
+            console.error('Error sending notifications:', notificationError);
+          }
         } catch (error) {
           socket.emit('error', { message: 'Failed to send project message' });
         }
@@ -179,7 +236,6 @@ export class WebSocketService {
 
       // Handle disconnection
       socket.on('disconnect', () => {
-        console.log(`❌ User disconnected: ${socket.userId}`);
         if (socket.userId) {
           this.userSockets.delete(socket.userId);
           

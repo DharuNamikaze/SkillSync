@@ -6,7 +6,7 @@ const notificationSchema = new Schema<INotification>(
     userId: { type: String, required: true },
     type: { 
       type: String, 
-      enum: ['invitation', 'task_assignment', 'comment', 'deadline', 'achievement', 'mention', 'team_update', 'system'], 
+      enum: ['invitation', 'task_assignment', 'comment', 'deadline', 'achievement', 'mention', 'team_update', 'system', 'new_message'], 
       required: true 
     },
     title: { type: String, required: true },

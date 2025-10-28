@@ -8,10 +8,10 @@ const projectService = new ProjectService();
 export class ProjectController {
   async createProject(req: Request, res: Response, next: NextFunction) {
     try {
-      console.log('Creating project with data:', {
-        userId: (req as AuthRequest).user?.id,
-        body: req.body
-      });
+      // Minimal log for debug
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Creating project');
+      }
       const userId = (req as AuthRequest).user?.id;
       if (!userId) {
         throw createError('User ID not found', 401);
@@ -34,10 +34,9 @@ export class ProjectController {
 
   async getProjects(req: Request, res: Response, next: NextFunction) {
     try {
-      console.log('Getting projects with query:', {
-        params: req.query,
-        user: (req as AuthRequest).user?.id
-      });
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Getting projects');
+      }
       const query: ProjectQuery = {
         search: req.query.search as string,
         status: req.query.status as string,

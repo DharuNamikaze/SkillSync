@@ -2,6 +2,7 @@ import React from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Home, Briefcase, Users, MessageSquare, Calendar as CalendarIcon, Bell, User, Settings as SettingsIcon, LogOut } from "lucide-react";
 import { useAuth } from "../AuthContext";
+import { useNotifications } from "../NotificationContext";
 import {
   Sidebar as NBSidebar,
   SidebarContent,
@@ -22,6 +23,7 @@ import { Button } from "./ui/button";
 function Sidebar() {
   const { user, logout } = useAuth();
   const { pathname } = useLocation();
+  const { unreadCount } = useNotifications();
   const isActive = (to) => pathname === to;
 
   return (
@@ -93,7 +95,14 @@ function Sidebar() {
                     tooltip="Notifications"
                     className={`hover-lift-reverse transition-all duration-200 p-6 ${isActive("/notifications") ? "p-6  bg-main text-main-foreground outline-border" : undefined}`}
                   >
-                    <Bell />
+                    <div className="relative">
+                      <Bell />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
+                    </div>
                     <span>Notifications</span>
                   </SidebarMenuButton>
                 </NavLink>

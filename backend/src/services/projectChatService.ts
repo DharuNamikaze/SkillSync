@@ -15,29 +15,16 @@ export class ProjectChatService {
   }): Promise<IProjectChat> {
     try {
       // Check if user is a member of the project
-      console.log('Checking project access:', { projectId, userId });
-      
       if (!projectId) {
-        console.log('Project ID is missing');
         throw createError('Project ID is required', 400);
       }
 
       const project = await Project.findById(projectId);
       if (!project) {
-        console.log('Project not found:', { projectId });
         throw createError(`Project not found with ID: ${projectId}`, 404);
       }
 
-      console.log('Project members check:', {
-        projectId,
-        userId,
-        members: project.members.userIds,
-        isMember: project.members.userIds.includes(userId),
-        createdBy: project.createdBy
-      });
-
       if (!project.members.userIds.includes(userId)) {
-        console.log('User not authorized:', { userId, projectMembers: project.members.userIds });
         throw createError('Not authorized to chat in this project', 403);
       }
 

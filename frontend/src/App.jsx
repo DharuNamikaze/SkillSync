@@ -14,18 +14,20 @@ import RedirectIfAuth from "./components/RedirectIfAuth";
 import ProjectWorkspace from "./components/ProjectWorkspace";
 import Layout from "./components/Layout";
 import { ThemeProvider } from "./ThemeContext";
+import { NotificationProvider } from "./NotificationContext";
 
 function App() {
   // Remove local auth state management - let AuthContext handle it
 
   return (
     <ThemeProvider>
-      <BrowserRouter
-        future={{
-          v7_relativeSplatPath: true,
-          v7_startTransition: true
-        }}
-      >
+      <NotificationProvider>
+        <BrowserRouter
+          future={{
+            v7_relativeSplatPath: true,
+            v7_startTransition: true
+          }}
+        >
         <Routes>
           {/* Public route */}
           <Route path="/login" element={<RedirectIfAuth><Login /></RedirectIfAuth>} />
@@ -105,7 +107,8 @@ function App() {
           
           <Route path="*" element={<NotFound />} />
         </Routes>
-      </BrowserRouter>
+        </BrowserRouter>
+      </NotificationProvider>
     </ThemeProvider>
   );
 }

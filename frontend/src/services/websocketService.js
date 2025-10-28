@@ -4,6 +4,7 @@ class WebSocketService {
   socket = null;
   projectMessageHandlers = new Map(); // Project chat messages
   projectTypingHandlers = new Map(); // Project chat typing
+  notificationHandlers = new Set(); // Notification handlers
   connectionHandlers = new Set();
   reconnectAttempts = 0;
   maxReconnectAttempts = 5;
@@ -108,6 +109,18 @@ class WebSocketService {
     this.socket.on('user_left_project', ({ userId, projectId }) => {
       console.log(`User ${userId} left project ${projectId}`);
     });
+
+    // Message notification listener
+    this.socket.on('message_notification', (notification) => {
+      console.log('Received message notification:', notification);
+      this.notificationHandlers.forEach(handler => handler(notification));
+    });
+
+    // General notification listener (for in-app notifications)
+    this.socket.on('notification', (notification) => {
+      console.log('Received notification:', notification);
+      this.notificationHandlers.forEach(handler => handler(notification));
+    });
   }
 
   disconnect() {
@@ -128,6 +141,7 @@ class WebSocketService {
 
     this.projectMessageHandlers.clear();
     this.projectTypingHandlers.clear();
+    this.notificationHandlers.clear();
     this.connectionHandlers.clear();
     this.joinedProjects.clear();
     this.reconnectAttempts = 0;
@@ -187,6 +201,12 @@ class WebSocketService {
   onProjectTyping(projectId, callback) {
     this.projectTypingHandlers.set(projectId, callback);
     return () => this.projectTypingHandlers.delete(projectId);
+  }
+
+  // Notification handlers
+  onNotification(callback) {
+    this.notificationHandlers.add(callback);
+    return () => this.notificationHandlers.delete(callback);
   }
 
   // Get connection status

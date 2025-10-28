@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
 import { ProjectController } from '../controllers/projectController';
 import { ProjectChatController } from '../controllers/projectChatController';
 import { authenticateToken } from '../middleware/auth';
@@ -20,22 +20,6 @@ const chatController = new ProjectChatController();
 router.use(authenticateToken);
 
 // Project Chat Routes - must come before general project routes to avoid parameter conflicts
-router.use('/:id/chat', (req: Request, res: Response, next: NextFunction) => {
-  console.log('Project chat route middleware:', {
-    method: req.method,
-    params: req.params,
-    query: req.query,
-    path: req.path,
-    baseUrl: req.baseUrl,
-    originalUrl: req.originalUrl,
-    headers: {
-      authorization: req.headers.authorization ? 'present' : 'missing',
-      'content-type': req.headers['content-type']
-    }
-  });
-  next();
-});
-
 router.get('/:id/chat', validateProjectId, chatController.getMessages);
 router.post('/:id/chat', validateProjectId, validateMessageContent, chatController.addMessage);
 router.delete('/:id/chat/:messageId', validateProjectId, chatController.deleteMessage);

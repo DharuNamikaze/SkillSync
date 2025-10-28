@@ -31,8 +31,6 @@ export class ProjectService {
         progress: 0
       });
       
-      console.log('Creating new project:', project);
-      
       await project.save();
       
       // Initialize IDE workspace
@@ -80,7 +78,6 @@ export class ProjectService {
       const { search, status, difficulty, page = 1, limit = 10 } = query;
       const filter: any = {};
 
-      console.log('Project query:', { search, status, difficulty, page, limit });
 
       // Search filter
       if (search) {
@@ -102,9 +99,6 @@ export class ProjectService {
       }
 
       const skip = (page - 1) * limit;
-      console.log('Project filter:', filter);
-
-      console.log('Executing query with filter:', filter);
       
       const projects = await Project.find(filter)
         .sort({ createdAt: -1 })
@@ -112,10 +106,8 @@ export class ProjectService {
         .limit(limit)
         .lean(); // Convert to plain JavaScript objects
 
-      console.log('Raw projects from database:', projects);
       
       const total = await Project.countDocuments(filter);
-      console.log('Total projects count:', total);
 
       // Map the lean results to proper format with all required fields
       const mappedProjects = projects.map(project => ({
@@ -145,7 +137,6 @@ export class ProjectService {
         updatedAt: project.updatedAt
       }));
 
-      console.log('Returning projects:', mappedProjects.length);
       return { projects: mappedProjects as any as IProject[], total };
     } catch (error) {
       console.error('Get projects error:', error);
@@ -209,7 +200,6 @@ export class ProjectService {
       const project = await Project.findOneAndUpdate(
         {
           _id: projectId,
-          //'members.current': { $lt: parseInt(''$members.max) }, // Only update if there's space
           'members.userIds': { $ne: userId } // Only update if user is not already a member
         },
         {

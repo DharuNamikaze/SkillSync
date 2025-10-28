@@ -1,12 +1,34 @@
 import Notification from '../models/Notification';
 import { CreateNotificationRequest, INotification, NotificationQuery } from '../types';
 import { createError } from '../middleware/errorHandler';
+import { WebSocketService } from './webSocketService';
 
 export class NotificationService {
+  private wsService?: WebSocketService;
+
+  setWebSocketService(wsService: WebSocketService) {
+    this.wsService = wsService;
+  }
+
   async createNotification(notificationData: CreateNotificationRequest): Promise<INotification> {
     try {
       const notification = new Notification(notificationData);
       await notification.save();
+      
+      // Send real-time notification via WebSocket
+      if (this.wsService) {
+        this.wsService.sendNotificationToUser(notificationData.userId, {
+          ...notification.toJSON(),
+          type: notificationData.type,
+          title: notificationData.title,
+          message: notificationData.message,
+          sender: notificationData.sender,
+          actionUrl: notificationData.actionUrl,
+          category: notificationData.category,
+          priority: notificationData.priority
+        });
+      }
+      
       return notification;
     } catch (error) {
       console.error('Create notification error:', error);
@@ -204,6 +226,85 @@ export class NotificationService {
       return await this.createNotification(notificationData);
     } catch (error) {
       console.error('Create deadline notification error:', error);
+      throw error;
+    }
+  }
+
+  async createMessageNotification(
+    userId: string,
+    projectId: string,
+    projectName: string,
+    senderId: string,
+    senderName: string,
+    messagePreview: string,
+    senderAvatar?: string
+  ): Promise<INotification> {
+    try {
+      const notificationData: CreateNotificationRequest = {
+        userId,
+        type: 'new_message' as any, // Type assertion for the new type
+        title: 'New Message',
+        message: messagePreview,
+        priority: 'medium',
+        sender: {
+          id: senderId,
+          name: senderName,
+          avatar: senderAvatar
+        },
+        actionUrl: `/messages?project=${projectId}`,
+        category: 'messages',
+        metadata: {
+          projectId,
+          projectName
+        }
+      };
+
+      return await this.createNotification(notificationData);
+    } catch (error) {
+      console.error('Create message notification error:', error);
+      throw error;
+    }
+  }
+
+  async markProjectMessagesAsRead(userId: string, projectId: string): Promise<number> {
+    try {
+      const result = await Notification.updateMany(
+        { 
+          userId, 
+          isRead: false, 
+          type: 'new_message',
+          'metadata.projectId': projectId 
+        },
+        { isRead: true }
+      );
+      return result.modifiedCount;
+    } catch (error) {
+      console.error('Mark project messages as read error:', error);
+      throw error;
+    }
+  }
+
+  async getUnreadCountsByProject(userId: string): Promise<Record<string, number>> {
+    try {
+      const notifications = await Notification.find({
+        userId,
+        isRead: false,
+        type: 'new_message',
+        'metadata.projectId': { $exists: true }
+      }).select('metadata.projectId');
+
+      // Count unread messages per project
+      const counts: Record<string, number> = {};
+      notifications.forEach(notif => {
+        const projectId = notif.metadata?.projectId;
+        if (projectId) {
+          counts[projectId] = (counts[projectId] || 0) + 1;
+        }
+      });
+
+      return counts;
+    } catch (error) {
+      console.error('Get unread counts by project error:', error);
       throw error;
     }
   }

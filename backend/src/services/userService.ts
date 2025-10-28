@@ -105,19 +105,19 @@ export class UserService {
 
   async searchUsers(query: string, currentUserId: string): Promise<IUser[]> {
     try {
-      // Search users by username or name, excluding the current user
+      // Search users by name or email, excluding the current user
       const users = await User.find({
         $and: [
           {
             $or: [
-              { username: { $regex: query, $options: 'i' } },
-              { name: { $regex: query, $options: 'i' } }
+              { name: { $regex: query, $options: 'i' } },
+              { email: { $regex: query, $options: 'i' } }
             ]
           },
           { _id: { $ne: currentUserId } }
         ]
       })
-      .select('_id name username picture')
+      .select('_id name email picture')
       .limit(10);
       
       return users;

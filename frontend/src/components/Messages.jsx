@@ -1,11 +1,15 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useLocation } from 'react-router-dom';
 import { Send, Paperclip, Users, Folder, Search } from "lucide-react";
 import websocketService from '../services/websocketService';
 import { useAuth } from '../AuthContext';
 import { ProjectsAPI } from '../lib/api';
+import { showMessageNotification } from '../utils/notificationUtils';
+import { getAuthToken } from '../auth';
 
 function Messages() {
   const { user } = useAuth();
+  const location = useLocation();
   const [projects, setProjects] = useState([]);
   const [activeProject, setActiveProject] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -13,7 +17,29 @@ function Messages() {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [unreadCounts, setUnreadCounts] = useState({});
   const messagesEndRef = useRef(null);
+
+
+  // Fetch unread counts from API
+  const fetchUnreadCounts = async () => {
+    try {
+      const token = getAuthToken();
+      if (!token) return;
+      
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/notifications/unread-counts-by-project`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Fetched unread counts:', data.data);
+        setUnreadCounts(data.data || {});
+      }
+    } catch (error) {
+      console.error('Error fetching unread counts:', error);
+    }
+  };
 
   // Fetch user's projects
   useEffect(() => {
@@ -24,7 +50,20 @@ function Messages() {
         const projectsResponse = await ProjectsAPI.userProjects();
         if (mounted) {
           setProjects(projectsResponse.data || []);
-          if (projectsResponse.data?.length > 0) {
+          
+          // Fetch unread counts
+          await fetchUnreadCounts();
+          
+          // Check if we should select a specific project (from notification)
+          const targetProjectId = location.state?.projectId;
+          if (targetProjectId && projectsResponse.data?.length > 0) {
+            const targetProject = projectsResponse.data.find(p => p.id === targetProjectId);
+            if (targetProject) {
+              setActiveProject(targetProject);
+            } else if (projectsResponse.data.length > 0) {
+              setActiveProject(projectsResponse.data[0]);
+            }
+          } else if (projectsResponse.data?.length > 0) {
             setActiveProject(projectsResponse.data[0]);
           }
         }
@@ -45,8 +84,29 @@ function Messages() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [location.state]);
 
+  // Mark project messages as read when opening a project
+  const markProjectMessagesAsRead = async (projectId) => {
+    try {
+      const token = getAuthToken();
+      if (!token) return;
+      
+      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/notifications/mark-project-read/${projectId}`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      // Clear unread count for this project
+      setUnreadCounts(prev => ({
+        ...prev,
+        [projectId]: 0
+      }));
+    } catch (error) {
+      console.error('Error marking project messages as read:', error);
+    }
+  };
+  
   // Fetch messages when active project changes
   useEffect(() => {
     const fetchMessages = async () => {
@@ -55,6 +115,9 @@ function Messages() {
       try {
         setLoading(true);
         setMessages([]);
+        
+        // Mark messages as read when opening project
+        markProjectMessagesAsRead(activeProject.id);
         
         console.log('Fetching project messages for:', activeProject.id);
         const response = await ProjectsAPI.getProjectMessages(activeProject.id);
@@ -126,6 +189,54 @@ function Messages() {
     };
   }, [activeProject?.id]);
 
+  // Global notification listener for all projects
+  useEffect(() => {
+    console.log('🔔 Setting up global notification listener');
+    
+    const cleanup = websocketService.onNotification((notification) => {
+      console.log('🔔 Global notification received:', notification);
+      
+      if (notification.type === 'new_message') {
+        // Increment unread count for the project
+        const projectId = notification.projectId;
+        if (projectId && activeProject?.id !== projectId) {
+          setUnreadCounts(prev => ({
+            ...prev,
+            [projectId]: (prev[projectId] || 0) + 1
+          }));
+        }
+        
+        // Only show notification if not viewing the active project chat
+        if (activeProject?.id === notification.projectId) {
+          console.log('🔔 Skipping notification - user is viewing this chat');
+          return;
+        }
+        
+        // Find the project name
+        const project = projects.find(p => p.id === notification.projectId);
+        const projectName = project?.name || 'Project Chat';
+        
+        const truncatedMessage = notification.message?.length > 100 
+          ? notification.message.substring(0, 100) + '...' 
+          : notification.message;
+        
+        console.log('🔔 Showing notification for:', notification.sender.name, truncatedMessage);
+        
+        showMessageNotification(
+          notification.sender.name,
+          truncatedMessage,
+          projectName,
+          () => {
+            console.log('Notification clicked - focusing window');
+            window.focus();
+          }
+        );
+      }
+    });
+    
+    return cleanup;
+  }, [projects, activeProject?.id]);
+
   // Handle WebSocket connections for project chat
   useEffect(() => {
     if (!activeProject) return;
@@ -140,6 +251,10 @@ function Messages() {
     cleanupFns.push(
       websocketService.onProjectMessage(activeProject.id, (message) => {
         console.log('✅ Received project message via WebSocket:', message);
+        
+        // Note: Notifications for active project messages are handled by the global listener
+        // We don't show notifications here since user is viewing this chat
+        
         setMessages(prev => {
           // Remove optimistic message with temp ID if it exists
           const withoutTemp = prev.filter(m => !m.id.startsWith('temp-'));
@@ -174,7 +289,7 @@ function Messages() {
         console.log(`Left project room: ${activeProject.id}`);
       }
     };
-  }, [activeProject?.id]);
+  }, [activeProject?.id, user?.id]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -271,31 +386,39 @@ function Messages() {
             ) : (
               <div>
                 {filteredProjects.length > 0 ? (
-                  filteredProjects.map(project => (
-                    <button
-                      key={project.id}
-                      className={`w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors flex items-center space-x-3 ${
-                        activeProject?.id === project.id ? 'bg-blue-50' : ''
-                      }`}
-                      onClick={() => setActiveProject(project)}
-                    >
-                      <div className="relative">
-                        <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                          <Folder className="h-6 w-6 text-blue-600" />
+                  filteredProjects.map(project => {
+                    const unreadCount = unreadCounts[project.id] || 0;
+                    return (
+                      <button
+                        key={project.id}
+                        className={`w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors flex items-center space-x-3 ${
+                          activeProject?.id === project.id ? 'bg-blue-50' : ''
+                        }`}
+                        onClick={() => setActiveProject(project)}
+                      >
+                        <div className="relative">
+                          <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                            <Folder className="h-6 w-6 text-blue-600" />
+                          </div>
+                          {unreadCount > 0 && (
+                            <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold">
+                              {unreadCount > 9 ? '9+' : unreadCount}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-baseline">
-                          <h3 className="font-medium text-gray-900 truncate">{project.name}</h3>
-                          <span className="text-xs text-gray-500 flex items-center">
-                            <Users className="h-3 w-3 mr-1" />
-                            {project.members.current}
-                          </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-baseline">
+                            <h3 className="font-medium text-gray-900 truncate">{project.name}</h3>
+                            <span className="text-xs text-gray-500 flex items-center">
+                              <Users className="h-3 w-3 mr-1" />
+                              {project.members.current}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600 truncate">{project.department}</p>
                         </div>
-                        <p className="text-sm text-gray-600 truncate">{project.department}</p>
-                      </div>
-                    </button>
-                  ))
+                      </button>
+                    );
+                  })
                 ) : (
                   <div className="p-4 text-center text-gray-500">
                     No projects found

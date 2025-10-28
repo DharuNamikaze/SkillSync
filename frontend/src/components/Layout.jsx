@@ -4,6 +4,7 @@ import Sidebar from './Sidebar';
 import { SidebarProvider, SidebarInset, useSidebar } from './ui/sidebar';
 import { Button } from './ui/button';
 import { PanelLeftIcon } from 'lucide-react';
+import NotificationPopup from './NotificationPopup';
 
 const Layout = ({ children, hideSidebar = false }) => {
   const { isAuthenticated } = useAuth();
@@ -24,6 +25,8 @@ const Layout = ({ children, hideSidebar = false }) => {
           {/* Mobile top bar with hamburger trigger */}
           <MobileTopBar />
           {children}
+          {/* Global notification popup */}
+          <NotificationPopup />
         </SidebarInset>
       </SidebarProvider>
     );

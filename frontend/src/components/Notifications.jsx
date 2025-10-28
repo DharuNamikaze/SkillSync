@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getAuthToken } from "../auth";
 import {
   Bell,
@@ -24,6 +25,7 @@ import {
 } from 'lucide-react';
 
 const Notifications = () => {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -69,7 +71,8 @@ const Notifications = () => {
       achievement: Award,
       mention: MessageCircle,
       team_update: User,
-      system: Settings
+      system: Settings,
+      new_message: MessageCircle
     };
     return icons[type] || Bell;
   };
@@ -83,7 +86,8 @@ const Notifications = () => {
       achievement: 'bg-purple-100 text-purple-600',
       mention: 'bg-yellow-100 text-yellow-600',
       team_update: 'bg-indigo-100 text-indigo-600',
-      system: 'bg-gray-100 text-gray-600'
+      system: 'bg-gray-100 text-gray-600',
+      new_message: 'bg-green-100 text-green-600'
     };
     return colors[type] || 'bg-gray-100 text-gray-600';
   };
@@ -150,8 +154,15 @@ const Notifications = () => {
     if (!notification.isRead) {
       markAsRead(notification.id);
     }
-    // In real app, navigate to the action URL
-    console.log('Navigating to:', notification.actionUrl);
+    
+    // Handle navigation based on notification type
+    if (notification.type === 'new_message' && notification.metadata?.projectId) {
+      navigate('/messages', { state: { projectId: notification.metadata.projectId } });
+    } else if (notification.actionUrl) {
+      // For other types, navigate to action URL if available
+      const path = notification.actionUrl.startsWith('/') ? notification.actionUrl : `/${notification.actionUrl}`;
+      navigate(path);
+    }
   };
 
   if (loading) {
@@ -349,6 +360,7 @@ const Notifications = () => {
                 { key: 'all', label: 'All' },
                 { key: 'projects', label: 'Projects' },
                 { key: 'tasks', label: 'Tasks' },
+                { key: 'messages', label: 'Messages' },
                 { key: 'comments', label: 'Comments' },
                 { key: 'team', label: 'Team' },
                 { key: 'system', label: 'System' }

@@ -15,9 +15,11 @@ router.use(authenticateToken);
 // Notification operations
 router.get('/', validateNotificationQuery, notificationController.getUserNotifications);
 router.get('/unread-count', notificationController.getUnreadCount);
+router.get('/unread-counts-by-project', notificationController.getUnreadCountsByProject);
 router.get('/:id', validateNotificationId, notificationController.getNotificationById);
 router.put('/:id/read', validateNotificationId, notificationController.markAsRead);
 router.put('/mark-all-read', notificationController.markAllAsRead);
+router.put('/mark-project-read/:projectId', notificationController.markProjectMessagesAsRead);
 router.delete('/:id', validateNotificationId, notificationController.deleteNotification);
 
 export default router;
