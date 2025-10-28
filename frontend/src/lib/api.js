@@ -69,7 +69,7 @@ export const ProjectsAPI = {
     return request("/projects/stats");
   },
   get(id) {
-    return request(`/projects/${id}`);
+    return request(`/projects/${id}`, { auth: true });
   },
   create(payload) {
     return request("/projects", { method: "POST", body: payload, auth: true });

@@ -1,7 +1,7 @@
 import Project from '../models/Project';
 import { CreateProjectRequest, UpdateProjectRequest, IProject, ProjectQuery } from '../types';
 import { createError } from '../middleware/errorHandler';
-import { CodeSandboxService } from './codeSandboxService';
+import { codeSandboxService } from './codeSandboxService';
 
 export class ProjectService {
   async createProject(userId: string, projectData: CreateProjectRequest): Promise<IProject> {
@@ -45,32 +45,33 @@ export class ProjectService {
 
   private async initializeIDEWorkspace(project: IProject): Promise<void> {
     try {
-      const workspace = await this.createCodeSandboxWorkspace(project);
-      if (!workspace) return;
+      // Create sandbox using new SDK
+      const workspace = await codeSandboxService.createProjectSandbox(
+        project.name,
+        (project as any).sandboxTemplate || 'node',
+        project._id?.toString()
+      );
 
+      if (!workspace) {
+        console.warn('⚠️  Sandbox creation skipped - CodeSandbox API key not configured');
+        return;
+      }
+
+      // Update project with workspace details
       await Project.findByIdAndUpdate(project._id, {
         workspace: {
-          sandboxId: (workspace as any).id,
-          ideUrl: (workspace as any).url,
-          embedUrl: (workspace as any).embed_url,
-          editUrl: (workspace as any).editor_url
+          sandboxId: workspace.sandboxId,
+          ideUrl: workspace.ideUrl,
+          embedUrl: workspace.embedUrl,
+          editUrl: workspace.editUrl
         }
       });
+
+      console.log(`✅ Workspace initialized for project ${project._id}`);
     } catch (error) {
-      console.error('IDE workspace initialization error:', error);
+      console.error('❌ IDE workspace initialization error:', error);
       // Don't fail project creation if IDE setup fails
     }
-  }
-
-  private async createCodeSandboxWorkspace(project: IProject): Promise<any> {
-    const codeSandboxService = new CodeSandboxService();
-    
-    return await codeSandboxService.createSandbox({
-      templateId: (project as any).templateId,
-      name: project.name,
-      description: project.description,
-      technologies: project.technologies
-    });
   }
 
   async getProjects(query: ProjectQuery): Promise<{ projects: IProject[], total: number }> {
@@ -186,8 +187,27 @@ export class ProjectService {
 
   async deleteProject(projectId: string, userId: string): Promise<boolean> {
     try {
-      const result = await Project.findOneAndDelete({ _id: projectId, createdBy: userId });
-      return !!result;
+      // Find the project first to get sandbox ID
+      const project = await Project.findOne({ _id: projectId, createdBy: userId });
+      
+      if (!project) {
+        return false;
+      }
+
+      // Delete the CodeSandbox if it exists
+      if ((project as any).workspace?.sandboxId) {
+        try {
+          await codeSandboxService.deleteSandbox((project as any).workspace.sandboxId);
+          console.log(`✅ Sandbox deleted for project ${projectId}`);
+        } catch (sandboxError) {
+          console.error('⚠️  Error deleting sandbox:', sandboxError);
+          // Continue with project deletion even if sandbox deletion fails
+        }
+      }
+
+      // Delete the project from database
+      await Project.findByIdAndDelete(projectId);
+      return true;
     } catch (error) {
       console.error('Delete project error:', error);
       throw error;

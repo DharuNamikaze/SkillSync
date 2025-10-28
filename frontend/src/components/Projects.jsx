@@ -11,7 +11,7 @@ import {
   Clock,
   Eye,
   UserPlus,
-  MoreVertical,
+  Trash,
   Briefcase,
   TrendingUp,
   Award,
@@ -36,6 +36,7 @@ const Projects = () => {
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [viewMode, setViewMode] = useState('grid');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   // Fetch projects from API with fallback to mock data
   useEffect(() => {
@@ -126,8 +127,6 @@ const Projects = () => {
     return colors[status] || colors['planning'];
   };
 
-
-
   const getDifficultyIcon = (difficulty) => {
     const config = {
       'beginner': { icon: '🟢', label: 'Beginner' },
@@ -202,13 +201,30 @@ const Projects = () => {
 
   const handleViewProject = (projectId) => {
     // Navigate to project details
-    window.open(`/projects/${projectId}`, '_blank');
+    window.open(`/projects/${projectId}/workspace`, '_blank');
   };
 
   const handleProjectCreated = (newProject) => {
     // Add the new project to the list
     setProjects(prev => [newProject, ...prev]);
     console.log('New project created:', newProject);
+  };
+
+  const handleDeleteProject = async (projectId) => {
+    const confirmed = window.confirm('Delete this project? This cannot be undone.');
+    if (!confirmed) return;
+    try {
+      setDeletingId(projectId);
+      const response = await ProjectsAPI.remove(projectId);
+      if (response.ok) {
+        setProjects(prev => prev.filter(p => p._id !== projectId));
+      }
+    } catch (error) {
+      const msg = error.response?.message || error.message || 'Failed to delete project';
+      alert(msg);
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   if (loading) {
@@ -247,8 +263,15 @@ const Projects = () => {
               {project.description}
             </CardDescription>
           </div>
-          <Button variant="neutral" size="icon" className="p-1">
-            <MoreVertical className="w-4 h-4" />
+          <Button
+            variant="neutral"
+            size="icon"
+            className="p-1"
+            title="Delete project"
+            onClick={() => handleDeleteProject(project._id)}
+            disabled={deletingId === project._id}
+          >
+            <Trash className="w-4 h-4" />
           </Button>
         </div>
 
@@ -358,7 +381,7 @@ const Projects = () => {
             <span>Join</span>
           </Button>
           <Button
-            onClick={() => handleViewProject(project.id)}
+            onClick={() => handleViewProject(project._id)}
             variant="neutral"
             className="flex items-center justify-center gap-2"
             size="sm"
@@ -369,7 +392,7 @@ const Projects = () => {
 
           {project.workspace?.ideUrl && (
             <Button
-              onClick={() => window.location.href = `/projects/${project.id}/workspace`}
+              onClick={() => window.location.href = `/projects/${project._id}/workspace`}
               variant="default"
               className="flex items-center justify-center gap-2"
               size="sm"
@@ -512,7 +535,7 @@ const Projects = () => {
           <>
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
               {filteredProjects.map(project => (
-                <ProjectCard key={project.id} project={project} />
+                <ProjectCard key={project._id} project={project} />
               ))}
             </div>
 

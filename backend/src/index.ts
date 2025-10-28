@@ -10,6 +10,8 @@ import { WebSocketService } from './services/webSocketService';
 // Load environment variables
 dotenv.config();
 
+console.log('CODESANDBOX_API_KEY:', process.env.CODESANDBOX_API_KEY);
+
 const app = express();
 const httpServer = createServer(app);
 const port = process.env.PORT || 3001;
@@ -51,7 +53,12 @@ app.use(express.urlencoded({ extended: true }));
 if (process.env.NODE_ENV !== 'production') {
   app.use((req, res, next) => {
     console.log(`${req.method} ${req.originalUrl}`);
-    if (req.method !== 'GET' && Object.keys(req.body).length > 0) {
+    if (
+      req.method !== 'GET' &&
+      req.body &&
+      typeof req.body === 'object' &&
+      Object.keys(req.body).length > 0
+    ) {
       console.log('Body:', req.body);
     }
     next();

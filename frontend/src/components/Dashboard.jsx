@@ -81,39 +81,53 @@ function Dashboard() {
     fetchDashboardData();
   }, []);
 
-  // Format date to readable format
+  // Safely coerce values to numbers to avoid NaN in UI
+  const safeNum = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  // Format date to readable format (robust against invalid inputs)
   const formatDate = (date) => {
-    if (!date) return "";
-    
-    const now = new Date();
+    if (!date) return "N/A";
+
     const targetDate = new Date(date);
-    const diffMs = targetDate - now;
+    if (isNaN(targetDate.getTime())) return "N/A";
+
+    const now = new Date();
+    const diffMs = targetDate.getTime() - now.getTime();
+    if (!Number.isFinite(diffMs)) return "N/A";
+
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    
+
     if (diffDays === 0) {
-      if (diffHours <= 0) {
-        return "Today";
-      }
+      if (diffHours <= 0) return "Today";
       return `In ${diffHours} hour${diffHours !== 1 ? 's' : ''}`;
     } else if (diffDays === 1) {
       return "Tomorrow";
+    } else if (diffDays < 0) {
+      return "Overdue";
     } else {
       return `In ${diffDays} days`;
     }
   };
 
-  // Format timestamp for activities
+  // Format timestamp for activities (robust against invalid inputs)
   const formatTimestamp = (timestamp) => {
-    if (!timestamp) return "";
-    
-    const now = new Date();
+    if (!timestamp) return "N/A";
+
     const activityDate = new Date(timestamp);
-    const diffMs = now - activityDate;
+    if (isNaN(activityDate.getTime())) return "N/A";
+
+    const now = new Date();
+    const diffMs = now.getTime() - activityDate.getTime();
+    if (!Number.isFinite(diffMs)) return "N/A";
+
     const diffMins = Math.floor(diffMs / (1000 * 60));
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    
+
     if (diffMins < 60) {
       return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
     } else if (diffHours < 24) {
@@ -200,7 +214,7 @@ function Dashboard() {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-sm font-base text-muted-foreground">Projects</p>
-                  <h3 className="text-2xl font-heading mt-1">{stats?.projectsCompleted + stats?.projectsInProgress}</h3>
+                  <h3 className="text-2xl font-heading mt-1">{safeNum(stats?.projectsCompleted) + safeNum(stats?.projectsInProgress)}</h3>
                 </div>
                 <div className="p-2 bg-secondary rounded-base border-2 border-border bg-green-700">
                   <Briefcase className="h-6 w-6 " />
@@ -208,11 +222,11 @@ function Dashboard() {
               </div>
               <div className="mt-4 flex justify-between text-xs text-muted-foreground">
                 <div>
-                  <span className="block font-base text-foreground">{stats?.projectsCompleted}</span>
+                  <span className="block font-base text-foreground">{safeNum(stats?.projectsCompleted)}</span>
                   <span>Completed</span>
                 </div>
                 <div>
-                  <span className="block font-base text-foreground">{stats?.projectsInProgress}</span>
+                  <span className="block font-base text-foreground">{safeNum(stats?.projectsInProgress)}</span>
                   <span>In Progress</span>
                 </div>
               </div>
@@ -224,7 +238,7 @@ function Dashboard() {
               <div className="flex justify-between items-start ">
                 <div>
                   <p className="text-sm font-base ">Tasks</p>
-                  <h3 className="text-2xl font-heading mt-1">{stats?.tasksCompleted + stats?.tasksInProgress}</h3>
+                  <h3 className="text-2xl font-heading mt-1">{safeNum(stats?.tasksCompleted) + safeNum(stats?.tasksInProgress)}</h3>
                 </div>
                 <div className="p-2 bg-accent rounded-base border-2 border-border ">
                   <CheckCircle2 className="h-6 w-6" />
@@ -232,11 +246,11 @@ function Dashboard() {
               </div>
               <div className="mt-4 flex justify-between text-xs text-muted-foreground">
                 <div>
-                  <span className="block font-base text-foreground">{stats?.tasksCompleted}</span>
+                  <span className="block font-base text-foreground">{safeNum(stats?.tasksCompleted)}</span>
                   <span>Completed</span>
                 </div>
                 <div>
-                  <span className="block font-base text-foreground">{stats?.tasksInProgress}</span>
+                  <span className="block font-base text-foreground">{safeNum(stats?.tasksInProgress)}</span>
                   <span>In Progress</span>
                 </div>
               </div>
