@@ -1,16 +1,16 @@
 {
-    "name": "backend",
+    "name": "skillsync-backend",
     "version": "1.0.0",
-    "description": "",
-    "main": "index.ts",
+    "description": "SkillSync Backend - Collaborative platform for skill development",
+    "main": "dist/index.js",
     "scripts": {
         "build": "tsc",
         "start": "node dist/index.js",
         "dev": "ts-node src/index.ts"
     },
-    "keywords": [],
+    "keywords": ["skillsync", "collaboration", "skills"],
     "author": "",
-    "license": "ISC",
+    "license": "MIT",
     "type": "commonjs",
     "dependencies": {
         "@types/express-session": "^1.18.2",

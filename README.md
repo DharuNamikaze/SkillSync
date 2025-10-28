@@ -17,18 +17,21 @@ A collaborative platform for skill development and project management, designed 
 ## Tech Stack
 
 ### Frontend
-- React 19
-- React Router v6
-- TailwindCSS 4
-- Vite 7
-- Lucide React (icons)
-- JWT Authentication
+- **React 19** - Modern UI library
+- **React Router v6** - Client-side routing
+- **TailwindCSS 4** - Utility-first CSS
+- **Vite 7** - Lightning-fast build tool
+- **Socket.IO Client** - Real-time WebSocket communication
+- **Lucide React** - Beautiful icons
+- **JWT Authentication** - Secure token-based auth
 
 ### Backend
-- Node.js with Express 5
-- TypeScript
-- MongoDB with Mongoose
-- JWT for authentication
+- **Node.js with Express 5** - Web framework
+- **TypeScript** - Type-safe JavaScript
+- **MongoDB with Mongoose** - NoSQL database
+- **Socket.IO** - Real-time WebSocket server
+- **JWT** - Authentication tokens
+- **Google OAuth 2.0** - Social authentication
 
 ## Installation & Setup
 
@@ -39,36 +42,47 @@ A collaborative platform for skill development and project management, designed 
 ### Backend Setup
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/skillsync.git
-cd skillsync
+# Clone the repository (or navigate to your project)
+cd SkillSync/backend
 
-# Setup backend
-cd backend
+# Install dependencies
 npm install
 
-# Create .env file with the following variables
-# PORT=3001
-# MONGODB_URI=your_mongodb_connection_string
-# MONGODB_DB=skillsync
+# Create .env file from example
+copy .env.example .env
+
+# Edit .env and configure:
+# - MONGODB_URI (local MongoDB or Atlas)
+# - GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET
+# - JWT_SECRET (change from default!)
 
 # Start development server
 npm run dev
 ```
+
+The backend will start on **http://localhost:3001** with WebSocket support.
 
 ### Frontend Setup
 
 ```bash
-# From the project root
-cd frontend
+# Navigate to frontend directory
+cd ../frontend
+
+# Install dependencies
 npm install
 
-# Create .env file with
-# VITE_API_BASE_URL=http://localhost:3001
+# Create .env file from example
+copy .env.example .env
+
+# Edit .env and configure:
+# - VITE_API_URL=http://localhost:3001/api
+# - VITE_GOOGLE_CLIENT_ID (same as backend)
 
 # Start development server
 npm run dev
 ```
+
+The frontend will start on **http://localhost:5173** with hot reload.
 
 ## Usage
 

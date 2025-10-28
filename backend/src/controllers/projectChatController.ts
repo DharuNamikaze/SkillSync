@@ -7,66 +7,23 @@ const chatService = new ProjectChatService();
 export class ProjectChatController {
   async addMessage(req: Request, res: Response, next: NextFunction) {
     try {
-      console.log('Add message request:', {
-        body: req.body,
-        params: req.params,
-        user: (req as AuthRequest).user
-      });
-
       const userId = (req as AuthRequest).user?.id;
-      const projectId = req.params.id || req.params.projectId; // Support both param names
-      
-      console.log('Parameters received:', {
-        userId,
-        projectId,
-        params: req.params,
-        body: req.body
-      });
+      const { id: projectId } = req.params;
       
       if (!userId) {
-        console.log('Message rejected: No user ID in token');
         return res.status(401).json({
           ok: false,
           error: 'Not authenticated'
         });
       }
 
-      if (!projectId) {
-        console.log('Message rejected: No project ID in params');
-        return res.status(400).json({
-          ok: false,
-          error: 'Project ID is required'
-        });
-      }
-
-      // Add the user's picture from auth context if not provided in body
-      const messageData: {
-        message: string;
-        userName: string;
-        userAvatar: string;
-        type?: 'text' | 'system' | 'code';
-        codeBlock?: {
-          language: string;
-          content: string;
-        };
-      } = {
+      const message = await chatService.addMessage(projectId, userId, {
         message: req.body.message,
-        userName: req.body.userName || (req as AuthRequest).user?.name,
-        userAvatar: req.body.userAvatar || (req as AuthRequest).user?.picture || '',
-        type: req.body.type || 'text',
-      };
-
-      if (req.body.codeBlock) {
-        messageData.codeBlock = req.body.codeBlock;
-      }
-
-      console.log('Attempting to add message:', {
-        projectId,
-        userId,
-        messageData
+        userName: req.body.userName,
+        userAvatar: req.body.userAvatar,
+        type: req.body.type,
+        codeBlock: req.body.codeBlock
       });
-
-      const message = await chatService.addMessage(projectId, userId, messageData);
 
       const response: ApiResponse = {
         ok: true,
@@ -82,14 +39,8 @@ export class ProjectChatController {
 
   async getMessages(req: Request, res: Response, next: NextFunction) {
     try {
-      console.log('Get messages request:', {
-        params: req.params,
-        query: req.query,
-        user: (req as AuthRequest).user
-      });
-
       const userId = (req as AuthRequest).user?.id;
-      const projectId = req.params.id || req.params.projectId; // Support both param names
+      const { id: projectId } = req.params;
       const { before, limit } = req.query;
       
       if (!userId) {
@@ -98,13 +49,6 @@ export class ProjectChatController {
           error: 'Not authenticated'
         });
       }
-
-      console.log('Fetching messages for:', {
-        projectId,
-        userId,
-        before,
-        limit
-      });
 
       const messages = await chatService.getProjectMessages(projectId, userId, {
         before: before ? new Date(before as string) : undefined,

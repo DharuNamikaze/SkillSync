@@ -5,7 +5,6 @@ import projectRoutes from './projectRoutes';
 import notificationRoutes from './notificationRoutes';
 import dashboardRoutes from './dashboardRoutes';
 import authRoutes from './authRoutes';
-import messageRoutes from './messageRoutes';
 
 const router = Router();
 
@@ -35,6 +34,5 @@ router.use('/skills', skillRoutes);
 router.use('/projects', projectRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/dashboard', dashboardRoutes);
-router.use('/messages', messageRoutes);
 
 export default router;

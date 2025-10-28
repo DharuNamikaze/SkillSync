@@ -2,26 +2,18 @@ import io from 'socket.io-client';
 
 class WebSocketService {
   socket = null;
-  messageHandlers = new Map();
-  typingHandlers = new Map();
-  readReceiptHandlers = new Map();
+  projectMessageHandlers = new Map(); // Project chat messages
+  projectTypingHandlers = new Map(); // Project chat typing
   connectionHandlers = new Set();
-  messageQueue = new Map();
   reconnectAttempts = 0;
   maxReconnectAttempts = 5;
   reconnectInterval = null;
+  joinedProjects = new Set(); // Track joined projects
 
   constructor() {
     this.connect = this.connect.bind(this);
     this.disconnect = this.disconnect.bind(this);
-    this.sendMessage = this.sendMessage.bind(this);
-    this.onMessage = this.onMessage.bind(this);
-    this.emitTyping = this.emitTyping.bind(this);
-    this.onTyping = this.onTyping.bind(this);
-    this.markMessagesAsRead = this.markMessagesAsRead.bind(this);
-    this.onMessagesRead = this.onMessagesRead.bind(this);
     this.onConnectionChange = this.onConnectionChange.bind(this);
-    this.processMessageQueue = this.processMessageQueue.bind(this);
   }
 
   onConnectionChange(connected) {
@@ -32,7 +24,6 @@ class WebSocketService {
         clearInterval(this.reconnectInterval);
         this.reconnectInterval = null;
       }
-      this.processMessageQueue();
     }
   }
 
@@ -44,32 +35,23 @@ class WebSocketService {
     return () => this.connectionHandlers.delete(handler);
   }
 
-  async processMessageQueue() {
-    if (!this.socket?.connected) return;
-
-    for (const [key, { recipientId, content, resolve, reject }] of this.messageQueue.entries()) {
-      try {
-        await this.sendMessage(recipientId, content);
-        resolve();
-      } catch (error) {
-        reject(error);
-      } finally {
-        this.messageQueue.delete(key);
-      }
-    }
-  }
 
   connect(token) {
     if (this.socket) {
       this.socket.disconnect();
     }
 
-    this.socket = io(import.meta.env.VITE_API_URL, {
+    // Extract base URL (remove /api if present)
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+    const wsUrl = apiUrl.replace('/api', '');
+
+    this.socket = io(wsUrl, {
       auth: { token },
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       reconnectionAttempts: this.maxReconnectAttempts,
+      transports: ['websocket', 'polling']
     });
 
     this.socket.on('connect', () => {
@@ -99,35 +81,32 @@ class WebSocketService {
       }
     });
 
-    // Set up message handlers
-    this.socket.on('new_message', (message) => {
-      const handler = this.messageHandlers.get(message.sender);
+    // Set up project chat handlers
+    this.socket.on('new_project_message', (message) => {
+      console.log('WebSocket received new_project_message:', message);
+      const handler = this.projectMessageHandlers.get(message.projectId);
+      console.log('Handler found for project:', message.projectId, ':', !!handler);
       if (handler) {
         handler(message);
+      } else {
+        console.warn('No handler registered for project:', message.projectId);
+        console.log('Registered project handlers:', Array.from(this.projectMessageHandlers.keys()));
       }
     });
 
-    this.socket.on('message_sent', (message) => {
-      const handler = this.messageHandlers.get(message.recipient);
+    this.socket.on('user_typing_project', ({ userId, projectId, isTyping }) => {
+      const handler = this.projectTypingHandlers.get(projectId);
       if (handler) {
-        handler(message);
+        handler(userId, isTyping);
       }
     });
 
-    // Set up typing handlers
-    this.socket.on('user_typing', ({ userId, isTyping }) => {
-      const handler = this.typingHandlers.get(userId);
-      if (handler) {
-        handler(isTyping);
-      }
+    this.socket.on('user_joined_project', ({ userId, projectId }) => {
+      console.log(`User ${userId} joined project ${projectId}`);
     });
 
-    // Set up read receipt handlers
-    this.socket.on('messages_read', ({ userId }) => {
-      const handler = this.readReceiptHandlers.get(userId);
-      if (handler) {
-        handler();
-      }
+    this.socket.on('user_left_project', ({ userId, projectId }) => {
+      console.log(`User ${userId} left project ${projectId}`);
     });
   }
 
@@ -137,70 +116,82 @@ class WebSocketService {
       this.reconnectInterval = null;
     }
     
+    // Leave all project rooms
+    this.joinedProjects.forEach(projectId => {
+      this.leaveProject(projectId);
+    });
+    
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
     }
 
-    this.messageHandlers.clear();
-    this.typingHandlers.clear();
-    this.readReceiptHandlers.clear();
+    this.projectMessageHandlers.clear();
+    this.projectTypingHandlers.clear();
     this.connectionHandlers.clear();
-    this.messageQueue.clear();
+    this.joinedProjects.clear();
     this.reconnectAttempts = 0;
   }
 
-  async sendMessage(recipientId, content) {
+
+  // Project chat methods
+  joinProject(projectId) {
     if (!this.socket?.connected) {
-      return new Promise((resolve, reject) => {
-        const messageId = Date.now().toString();
-        this.messageQueue.set(messageId, {
-          recipientId,
-          content,
-          resolve,
-          reject
-        });
-      });
+      console.warn('Cannot join project - socket not connected');
+      return;
+    }
+    this.socket.emit('join_project', { projectId });
+    this.joinedProjects.add(projectId);
+    console.log(`Joined project room: ${projectId}`);
+  }
+
+  leaveProject(projectId) {
+    if (!this.socket?.connected) return;
+    this.socket.emit('leave_project', { projectId });
+    this.joinedProjects.delete(projectId);
+    this.projectMessageHandlers.delete(projectId);
+    this.projectTypingHandlers.delete(projectId);
+    console.log(`Left project room: ${projectId}`);
+  }
+
+  async sendProjectMessage(projectId, content) {
+    if (!this.socket?.connected) {
+      throw new Error('WebSocket not connected');
     }
 
     return new Promise((resolve, reject) => {
-      this.socket.emit('send_message', { recipientId, content }, (error) => {
-        if (error) {
-          reject(error);
+      this.socket.emit('send_project_message', { projectId, content }, (response) => {
+        if (response?.error) {
+          reject(new Error(response.error));
         } else {
-          resolve();
+          resolve(response);
         }
       });
     });
   }
 
-  onMessage(userId, callback) {
-    this.messageHandlers.set(userId, callback);
-    return () => this.messageHandlers.delete(userId);
+  onProjectMessage(projectId, callback) {
+    console.log('Registering project message handler for:', projectId);
+    this.projectMessageHandlers.set(projectId, callback);
+    return () => {
+      console.log('Unregistering project message handler for:', projectId);
+      this.projectMessageHandlers.delete(projectId);
+    };
   }
 
-  emitTyping(recipientId, isTyping) {
-    if (!this.socket) {
-      throw new Error('WebSocket not connected');
-    }
-    this.socket.emit('typing', { recipientId, isTyping });
+  emitProjectTyping(projectId, isTyping) {
+    if (!this.socket?.connected) return;
+    this.socket.emit('project_typing', { projectId, isTyping });
   }
 
-  onTyping(userId, callback) {
-    this.typingHandlers.set(userId, callback);
-    return () => this.typingHandlers.delete(userId);
+  onProjectTyping(projectId, callback) {
+    this.projectTypingHandlers.set(projectId, callback);
+    return () => this.projectTypingHandlers.delete(projectId);
   }
 
-  markMessagesAsRead(conversationPartnerId) {
-    if (!this.socket) {
-      throw new Error('WebSocket not connected');
-    }
-    this.socket.emit('mark_read', { conversationPartnerId });
-  }
-
-  onMessagesRead(userId, callback) {
-    this.readReceiptHandlers.set(userId, callback);
-    return () => this.readReceiptHandlers.delete(userId);
+  // Get connection status
+  isConnected() {
+    return this.socket?.connected || false;
   }
 }
 

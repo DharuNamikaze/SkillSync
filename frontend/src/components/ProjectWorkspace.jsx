@@ -39,6 +39,8 @@ const ProjectWorkspace = () => {
   const [messages, setMessages] = useState([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const chatEndRef = useRef(null);
+  const editorFrameRef = useRef(null);
+  const previewFrameRef = useRef(null);
 
   useEffect(() => {
     fetchProjectData();
@@ -217,6 +219,12 @@ const ProjectWorkspace = () => {
     );
   }
 
+    // Derive embed URLs for editor and preview
+  const embedEditorUrl = project?.workspace?.embedUrl 
+    || (project?.workspace?.sandboxId ? `https://codesandbox.io/p/sandbox/${project.workspace.sandboxId}?embed=1` : null);
+  const embedPreviewUrl = project?.workspace?.previewUrl 
+    || (project?.workspace?.sandboxId ? `https://codesandbox.io/p/sandbox/${project.workspace.sandboxId}?embed=1&view=preview` : embedEditorUrl);
+
   return (
     <div className={`${isFullscreen ? 'fixed inset-0 z-50' : 'min-h-screen'} bg-background`}>
       {/* Header */}
@@ -346,7 +354,7 @@ const ProjectWorkspace = () => {
             className="flex items-center gap-2"
           >
             <MessageSquare className="w-4 h-4" />
-            Team Chat
+            Team Chat--
           </Button>
         </div>
       </div>
@@ -355,33 +363,55 @@ const ProjectWorkspace = () => {
       <div className={`${isFullscreen ? 'h-[calc(100vh-140px)]' : 'h-[calc(100vh-200px)]'}`}>
         {activeTab === 'editor' && (
           <div className="h-full">
-            <div className="h-full flex items-center justify-center">
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <Code2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="font-heading text-lg mb-2">Welcome to Your Project</h3>
-                  <p className="text-muted-foreground mb-4">
-                    The IDE interface is currently in development. Please check back soon!
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
+            {embedEditorUrl ? (
+              <iframe
+                ref={editorFrameRef}
+                title="CodeSandbox Editor"
+                src={embedEditorUrl}
+                className="w-full h-full bg-white"
+                allow="accelerometer; camera; encrypted-media; geolocation; gyroscope; microphone; midi; clipboard-read; clipboard-write; fullscreen; display-capture"
+                sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
+              />
+            ) : (
+              <div className="h-full flex items-center justify-center">
+                <Card>
+                  <CardContent className="pt-6 text-center">
+                    <Code2 className="w-12 h-12 text-muted-foreground mx-auto  animate-bounce" />
+                    <h3 className="font-heading text-lg mb-2">Workspace Initializing</h3>
+                    <p className="text-foreground mb-4">
+                      Your IDE is being prepared. If this takes too long, try reopening the workspace.
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </div>
         )}
 
         {activeTab === 'preview' && (
-          <div className="h-full">
-            <div className="h-full flex items-center justify-center">
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <Eye className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="font-heading text-lg mb-2">Preview Coming Soon</h3>
-                  <p className="text-muted-foreground">
-                    Project previews will be available in a future update.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
+          <div className="h-screen">
+            {embedPreviewUrl ? (
+              <iframe
+                ref={previewFrameRef}
+                title="CodeSandbox Preview"
+                src={embedPreviewUrl}
+                className="w-full h-screen bg-white"
+                allow="accelerometer; camera; encrypted-media; geolocation; gyroscope; microphone; midi; clipboard-read; clipboard-write; fullscreen; display-capture"
+                sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
+              />
+            ) : (
+              <div className="h-full flex items-center justify-center">
+                <Card>
+                  <CardContent className="pt-6 text-center">
+                    <Eye className="w-12 h-12 text-muted-foreground mx-auto mb-2  " />
+                    <h3 className="font-heading text-lg mb-2">Preview Unavailable</h3>
+                    <p className="text-muted-foreground">
+                      No running preview is available for this workspace yet.
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </div>
         )}
 
@@ -419,43 +449,36 @@ const ProjectWorkspace = () => {
             <div className="flex-1 flex flex-col">
               <div className="flex-1 p-4 overflow-y-auto">
                 <div className="space-y-4">
-                  {loadingMessages ? (
-                    <div className="flex justify-center p-4">
-                      <div className="w-6 h-6 border-2 border-main border-t-transparent rounded-full animate-spin"></div>
-                    </div>
-                  ) : (
-                    messages.map((message) => (
-                      <div key={message._id} className="flex items-start gap-3">
-                        <img
-                          src={message.userAvatar}
-                          alt={message.userName}
-                          className="w-8 h-8 rounded-full border-2 border-border"
-                        />
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-base font-medium text-sm">{message.userName}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(message.timestamp).toLocaleTimeString()}
-                            </span>
-                          </div>
-                          <Card className="inline-block max-w-2xl">
-                            <CardContent className="p-3">
-                              {message.type === 'code' ? (
-                                <pre className="bg-secondary-background p-2 rounded text-sm overflow-x-auto">
-                                  <code className={`language-${message.codeBlock?.language || 'plaintext'}`}>
-                                    {message.codeBlock?.content || message.message}
-                                  </code>
-                                </pre>
-                              ) : (
-                                <p className="text-sm whitespace-pre-wrap">{message.message}</p>
-                              )}
-                            </CardContent>
-                          </Card>
+                  {project.messages?.map((message) => (
+                    <div key={message.id} className="flex items-start gap-3">
+                      <img
+                        src={message.userAvatar}
+                        alt={message.userName}
+                        className="w-8 h-8 rounded-full border-2 border-border"
+                      />
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-base font-medium text-sm">{message.userName}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(message.timestamp).toLocaleTimeString()}
+                          </span>
                         </div>
+                        <Card className="inline-block max-w-2xl">
+                          <CardContent className="p-3">
+                            {message.type === 'code' ? (
+                              <pre className="bg-secondary-background p-2 rounded text-sm overflow-x-auto">
+                                <code className={`language-${message.codeBlock?.language || 'plaintext'}`}>
+                                  {message.codeBlock?.content || message.message}
+                                </code>
+                              </pre>
+                            ) : (
+                              <p className="text-sm whitespace-pre-wrap">{message.message}</p>
+                            )}
+                          </CardContent>
+                        </Card>
                       </div>
-                    ))
-                  )}
-                  <div ref={chatEndRef} />
+                    </div>
+                  ))}
                 </div>
               </div>
               

@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect } from "react";
 import { getAuthToken, setAuthToken, clearAuthToken } from "./auth";
 import { jwtDecode } from "jwt-decode";
 import { UsersAPI } from "./lib/api";
+import websocketService from "./services/websocketService";
 
 const AuthContext = createContext();
 
@@ -25,6 +26,9 @@ export function AuthProvider({ children }) {
           picture: decoded.picture,
           googleId: decoded.googleId
         });
+        
+        // Initialize WebSocket connection
+        websocketService.connect(token);
       } catch (e) {
         console.error('Token decode error:', e);
         setUser(null);
@@ -74,6 +78,9 @@ export function AuthProvider({ children }) {
         googleId: decoded.googleId
       });
 
+      // Initialize WebSocket connection
+      websocketService.connect(data.token);
+
     } catch (e) {
       console.error('Login error:', e);
       clearAuthToken(); // Clear any existing token
@@ -83,6 +90,7 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
+    websocketService.disconnect();
     clearAuthToken();
     setUser(null);
   };

@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Projects from "./components/Projects";
 import Notifications from "./components/Notifications";
