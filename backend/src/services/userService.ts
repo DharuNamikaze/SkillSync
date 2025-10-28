@@ -102,4 +102,28 @@ export class UserService {
       throw error;
     }
   }
+
+  async searchUsers(query: string, currentUserId: string): Promise<IUser[]> {
+    try {
+      // Search users by username or name, excluding the current user
+      const users = await User.find({
+        $and: [
+          {
+            $or: [
+              { username: { $regex: query, $options: 'i' } },
+              { name: { $regex: query, $options: 'i' } }
+            ]
+          },
+          { _id: { $ne: currentUserId } }
+        ]
+      })
+      .select('_id name username picture')
+      .limit(10);
+      
+      return users;
+    } catch (error) {
+      console.error('Search users error:', error);
+      throw error;
+    }
+  }
 }

@@ -28,11 +28,10 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // API routes
-const router = express.Router();
-router.use('/auth', authRoutes);
+const routes = require('./src/routes').default;
 
 // Mount all routes under /api
-app.use('/api', router);
+app.use('/api', routes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

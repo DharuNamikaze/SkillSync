@@ -42,6 +42,7 @@ export interface IProject extends Document {
     current: number;
     max: number;
     userIds: string[];
+    avatars?: string[];
   };
   progress: number;
   deadline: Date;
@@ -116,6 +117,8 @@ export interface CreateProjectRequest {
   department: string;
   difficulty: 'beginner' | 'intermediate' | 'advanced';
   tags?: string[];
+  templateId?: string;
+  sandboxTemplate?: string;
 }
 
 export interface UpdateProjectRequest {
@@ -156,6 +159,17 @@ export interface AuthRequest {
     name: string;
     picture: string;
   };
+}
+
+export interface CustomRequest extends AuthRequest {
+  project?: IProject;
+}
+
+// Extend Express Request to include our custom properties
+declare global {
+  namespace Express {
+    interface Request extends CustomRequest {}
+  }
 }
 
 export interface PaginationQuery {

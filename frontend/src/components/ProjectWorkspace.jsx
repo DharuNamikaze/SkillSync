@@ -23,6 +23,7 @@ import {
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
+import { Input } from './ui/input';
 import { ProjectsAPI } from '../lib/api';
 
 const ProjectWorkspace = () => {
@@ -79,8 +80,20 @@ const ProjectWorkspace = () => {
     if (!newMessage.trim()) return;
 
     try {
+      console.log('Sending message:', {
+        projectId,
+        message: {
+          message: newMessage,
+          userName: user.name,
+          userAvatar: user.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}`,
+          type: 'text'
+        }
+      });
+      
       const response = await ProjectsAPI.sendProjectMessage(projectId, {
         message: newMessage,
+        userName: user.name,
+        userAvatar: user.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}`,
         type: 'text'
       });
 
@@ -406,36 +419,43 @@ const ProjectWorkspace = () => {
             <div className="flex-1 flex flex-col">
               <div className="flex-1 p-4 overflow-y-auto">
                 <div className="space-y-4">
-                  {project.messages?.map((message) => (
-                    <div key={message.id} className="flex items-start gap-3">
-                      <img
-                        src={message.userAvatar}
-                        alt={message.userName}
-                        className="w-8 h-8 rounded-full border-2 border-border"
-                      />
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-base font-medium text-sm">{message.userName}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(message.timestamp).toLocaleTimeString()}
-                          </span>
-                        </div>
-                        <Card className="inline-block max-w-2xl">
-                          <CardContent className="p-3">
-                            {message.type === 'code' ? (
-                              <pre className="bg-secondary-background p-2 rounded text-sm overflow-x-auto">
-                                <code className={`language-${message.codeBlock?.language || 'plaintext'}`}>
-                                  {message.codeBlock?.content || message.message}
-                                </code>
-                              </pre>
-                            ) : (
-                              <p className="text-sm whitespace-pre-wrap">{message.message}</p>
-                            )}
-                          </CardContent>
-                        </Card>
-                      </div>
+                  {loadingMessages ? (
+                    <div className="flex justify-center p-4">
+                      <div className="w-6 h-6 border-2 border-main border-t-transparent rounded-full animate-spin"></div>
                     </div>
-                  ))}
+                  ) : (
+                    messages.map((message) => (
+                      <div key={message._id} className="flex items-start gap-3">
+                        <img
+                          src={message.userAvatar}
+                          alt={message.userName}
+                          className="w-8 h-8 rounded-full border-2 border-border"
+                        />
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-base font-medium text-sm">{message.userName}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(message.timestamp).toLocaleTimeString()}
+                            </span>
+                          </div>
+                          <Card className="inline-block max-w-2xl">
+                            <CardContent className="p-3">
+                              {message.type === 'code' ? (
+                                <pre className="bg-secondary-background p-2 rounded text-sm overflow-x-auto">
+                                  <code className={`language-${message.codeBlock?.language || 'plaintext'}`}>
+                                    {message.codeBlock?.content || message.message}
+                                  </code>
+                                </pre>
+                              ) : (
+                                <p className="text-sm whitespace-pre-wrap">{message.message}</p>
+                              )}
+                            </CardContent>
+                          </Card>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                  <div ref={chatEndRef} />
                 </div>
               </div>
               

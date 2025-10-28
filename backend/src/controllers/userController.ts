@@ -9,7 +9,15 @@ export class UserController {
   async createOrUpdateUser(req: Request, res: Response, next: NextFunction) {
     try {
       const userData = req.body;
+      
+      if (!userData || typeof userData !== 'object') {
+        throw createError('Valid user data is required', 400);
+      }
+
       const user = await userService.createOrUpdateUser(userData);
+      if (!user) {
+        throw createError('Failed to create/update user', 500);
+      }
       
       const response: ApiResponse = {
         ok: true,
@@ -17,7 +25,8 @@ export class UserController {
         message: 'User created/updated successfully'
       };
       
-      res.status(200).json(response);
+      // Use 201 status code for creation
+      res.status(201).json(response);
     } catch (error) {
       next(error);
     }
@@ -54,11 +63,17 @@ export class UserController {
         throw createError('User ID not found', 401);
       }
 
+      // First check if user exists
+      const existingUser = await userService.getUserById(userId);
+      if (!existingUser) {
+        throw createError('User not found', 404);
+      }
+
       const updateData = req.body;
       const user = await userService.updateUserProfile(userId, updateData);
       
       if (!user) {
-        throw createError('User not found', 404);
+        throw createError('Failed to update user profile', 500);
       }
 
       const response: ApiResponse = {
@@ -113,6 +128,33 @@ export class UserController {
           pages: Math.ceil(total / limit)
         },
         message: 'Users retrieved successfully'
+      };
+      
+      res.status(200).json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async searchUsers(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { query } = req.query;
+      const currentUserId = (req as AuthRequest).user?.id;
+      
+      if (!query || typeof query !== 'string') {
+        throw createError('Valid search query is required', 400);
+      }
+
+      if (!currentUserId) {
+        throw createError('Authentication required', 401);
+      }
+
+      const users = await userService.searchUsers(query, currentUserId);
+      
+      const response: ApiResponse = {
+        ok: true,
+        data: users,
+        message: 'Users found successfully'
       };
       
       res.status(200).json(response);

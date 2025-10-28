@@ -15,7 +15,8 @@ import {
   TrendingUp,
   Award,
   MapPin,
-  Code2
+  Code2,
+  AlertCircle
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
@@ -28,6 +29,7 @@ import CreateProjectModal from "./CreateProjectModal";
 const Projects = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [viewMode, setViewMode] = useState('grid');
@@ -38,107 +40,58 @@ const Projects = () => {
     const fetchProjects = async () => {
       setLoading(true);
       try {
-        // Try to fetch real data from API
-        try {
-          const response = await ProjectsAPI.list({
-            search: searchTerm || undefined,
-            status: selectedFilter === 'all' ? undefined : selectedFilter,
-            limit: 50
-          });
+        const response = await ProjectsAPI.list({
+          search: searchTerm || undefined,
+          status: selectedFilter === 'all' ? undefined : selectedFilter,
+          limit: 50
+        });
 
-          if (response.ok && response.data) {
-            setProjects(response.data);
-            setLoading(false);
-            return;
-          }
-        } catch (apiError) {
-          console.log('API not available, using mock data:', apiError.message);
+        console.log('Projects API response:', response);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Please log in to view projects');
+        }
+        throw new Error(response.error || 'Failed to fetch projects');
+      }
+
+      if (!response.data || !Array.isArray(response.data)) {
+        console.error('Invalid response data format:', response);
+        throw new Error('Invalid response format from server');
+      }
+
+      // Validate project data format
+      const validProjects = response.data.filter(project => {
+        const isValid = project && 
+          project._id && 
+          project.name && 
+          project.description &&
+          project.status &&
+          project.members;
+
+        if (!isValid) {
+          console.warn('Invalid project data:', project);
         }
 
-        // Fallback to mock data if API is not available
-        const mockProjects = [
-          {
-            id: 'proj-004',
-            name: 'Sustainable Energy Dashboard',
-            description: 'Real-time monitoring dashboard for renewable energy sources with predictive analytics and automated reporting.',
-            status: 'active',
-            technologies: ['Vue.js', 'D3.js', 'Python', 'InfluxDB'],
-            members: {
-              current: 6,
-              max: 6,
-              avatars: [
-                'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face',
-                'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=40&h=40&fit=crop&crop=face'
-              ]
-            },
-            progress: 85,
-            deadline: '2024-09-30',
-            createdBy: 'Alex Thompson',
-            department: 'Sustainability',
-            difficulty: 'advanced',
-            tags: ['dashboard', 'analytics', 'green-tech'],
-            metrics: {
-              commits: 312,
-              issues: 3,
-              stars: 78
-            },
-          },
-          {
-            id: 'proj-005',
-            name: 'Community Marketplace',
-            description: 'Local marketplace platform connecting community members for buying, selling, and trading goods and services.',
-            status: 'recruiting',
-            technologies: ['Next.js', 'Stripe', 'Firebase', 'Tailwind'],
-            members: {
-              current: 2,
-              max: 5,
-              avatars: [
-                'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=40&h=40&fit=crop&crop=face'
-              ]
-            },
-            progress: 25,
-            deadline: '2024-11-15',
-            createdBy: 'Lisa Park',
-            department: 'Community',
-            difficulty: 'intermediate',
-            tags: ['marketplace', 'community', 'e-commerce'],
-            metrics: {
-              commits: 98,
-              issues: 7,
-              stars: 23
-            },
-          },
-          {
-            id: 'proj-006',
-            name: 'Mental Health Tracker',
-            description: 'Privacy-focused mental health tracking app with mood analytics, meditation guides, and peer support features.',
-            status: 'completed',
-            technologies: ['Flutter', 'Dart', 'Firebase', 'Charts'],
-            members: {
-              current: 4,
-              max: 4,
-              avatars: [
-                'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face',
-                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=40&h=40&fit=crop&crop=face'
-              ]
-            },
-            progress: 100,
-            deadline: '2024-08-15',
-            createdBy: 'David Kim',
-            department: 'Healthcare',
-            difficulty: 'intermediate',
-            tags: ['health', 'mobile', 'privacy'],
-            metrics: {
-              commits: 445,
-              issues: 0,
-              stars: 234
-            },
-          }
-        ];
+        return isValid;
+      });
 
-        setProjects(mockProjects);
+      if (validProjects.length < response.data.length) {
+        console.warn(`Filtered ${response.data.length - validProjects.length} invalid projects`);
+      }
+
+      setError(null); // Clear any previous errors
+      setProjects(validProjects);
       } catch (error) {
         console.error('Error fetching projects:', error);
+        
+        // Handle specific error cases
+        if (error.message === 'Authentication required' || error.response?.status === 401) {
+          setError('Please log in to view projects');
+        } else {
+          setError(error.message || 'Failed to load projects. Please try again.');
+        }
+        
         setProjects([]);
       } finally {
         setLoading(false);
@@ -394,7 +347,7 @@ const Projects = () => {
       <CardContent className="pt-0 bg-muted/50 border-t border-border">
         <div className="flex gap-2">
           <Button
-            onClick={() => handleJoinProject(project.id)}
+            onClick={() => handleJoinProject(project._id)}
             disabled={project.members.current >= project.members.max || project.status === 'completed'}
             className="flex-1 flex items-center justify-center gap-2"
             size="sm"
@@ -541,21 +494,36 @@ const Projects = () => {
           </Card>
         </div>
 
-        {/* Projects Grid */}
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredProjects.map(project => (
-            <ProjectCard key={project.id} project={project} />
-          ))}
-        </div>
-
-        {filteredProjects.length === 0 && (
+        {/* Error State */}
+        {error && (
           <div className="text-center py-12">
-            <div className="mx-auto w-24 h-24 bg-secondary-background rounded-full flex items-center justify-center mb-4">
-              <Search className="w-8 h-8 text-muted-foreground" />
+            <div className="mx-auto w-24 h-24 bg-red-50 rounded-full flex items-center justify-center mb-4">
+              <AlertCircle className="w-8 h-8 text-red-500" />
             </div>
-            <h3 className="text-lg font-medium text-foreground mb-2">No projects found</h3>
-            <p className="text-muted-foreground">Try adjusting your search or filter criteria</p>
+            <h3 className="text-lg font-medium text-red-500 mb-2">{error}</h3>
+            <p className="text-muted-foreground">Please try again or contact support if the problem persists</p>
           </div>
+        )}
+
+        {/* Projects Grid */}
+        {!error && (
+          <>
+            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredProjects.map(project => (
+                <ProjectCard key={project.id} project={project} />
+              ))}
+            </div>
+
+            {filteredProjects.length === 0 && !error && (
+              <div className="text-center py-12">
+                <div className="mx-auto w-24 h-24 bg-secondary-background rounded-full flex items-center justify-center mb-4">
+                  <Search className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-medium text-foreground mb-2">No projects found</h3>
+                <p className="text-muted-foreground">Try adjusting your search or filter criteria</p>
+              </div>
+            )}
+          </>
         )}
 
         {/* Create Project Modal */}

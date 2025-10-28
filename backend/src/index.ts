@@ -33,7 +33,21 @@ app.use(express.urlencoded({ extended: true }));
 
 // Request logging middleware
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  console.log('Incoming request:', {
+    timestamp: new Date().toISOString(),
+    method: req.method,
+    path: req.path,
+    baseUrl: req.baseUrl,
+    originalUrl: req.originalUrl
+  });
+  next();
+});
+
+// Add request body logging for debugging
+app.use((req, res, next) => {
+  if (req.method !== 'GET') {
+    console.log('Request body:', req.body);
+  }
   next();
 });
 

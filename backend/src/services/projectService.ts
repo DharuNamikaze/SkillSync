@@ -11,12 +11,27 @@ export class ProjectService {
         createdBy: userId,
         department: projectData.department || 'General',
         deadline: projectData.deadline || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+        templateId: projectData.templateId || 'default',
+        sandboxTemplate: projectData.sandboxTemplate || 'default',
+        status: 'recruiting',
+        technologies: projectData.technologies || [],
+        isPublic: true,
         members: {
           current: 1,
           max: projectData.maxMembers || 5,
-          userIds: [userId]
-        }
+          userIds: [userId],
+          avatars: []
+        },
+        tags: [],
+        metrics: {
+          commits: 0,
+          issues: 0,
+          stars: 0
+        },
+        progress: 0
       });
+      
+      console.log('Creating new project:', project);
       
       await project.save();
       
@@ -65,6 +80,8 @@ export class ProjectService {
       const { search, status, difficulty, page = 1, limit = 10 } = query;
       const filter: any = {};
 
+      console.log('Project query:', { search, status, difficulty, page, limit });
+
       // Search filter
       if (search) {
         filter.$or = [
@@ -85,14 +102,51 @@ export class ProjectService {
       }
 
       const skip = (page - 1) * limit;
+      console.log('Project filter:', filter);
+
+      console.log('Executing query with filter:', filter);
+      
       const projects = await Project.find(filter)
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit);
+        .limit(limit)
+        .lean(); // Convert to plain JavaScript objects
 
+      console.log('Raw projects from database:', projects);
+      
       const total = await Project.countDocuments(filter);
+      console.log('Total projects count:', total);
 
-      return { projects, total };
+      // Map the lean results to proper format with all required fields
+      const mappedProjects = projects.map(project => ({
+        _id: project._id,
+        name: project.name,
+        description: project.description,
+        status: project.status,
+        technologies: project.technologies || [],
+        templateId: project.templateId,
+        sandboxTemplate: project.sandboxTemplate,
+        isPublic: project.isPublic ?? true,
+        workspace: project.workspace || {},
+        members: {
+          current: project.members?.current || 0,
+          max: project.members?.max || 5,
+          userIds: project.members?.userIds || [],
+          avatars: project.members?.avatars || []
+        },
+        progress: project.progress || 0,
+        deadline: project.deadline,
+        createdBy: project.createdBy,
+        department: project.department,
+        difficulty: project.difficulty,
+        tags: project.tags || [],
+        metrics: project.metrics || { commits: 0, issues: 0, stars: 0 },
+        createdAt: project.createdAt,
+        updatedAt: project.updatedAt
+      }));
+
+      console.log('Returning projects:', mappedProjects.length);
+      return { projects: mappedProjects as any as IProject[], total };
     } catch (error) {
       console.error('Get projects error:', error);
       throw error;
@@ -155,7 +209,7 @@ export class ProjectService {
       const project = await Project.findOneAndUpdate(
         {
           _id: projectId,
-          'members.current': { $lt: '$members.max' }, // Only update if there's space
+          //'members.current': { $lt: parseInt(''$members.max) }, // Only update if there's space
           'members.userIds': { $ne: userId } // Only update if user is not already a member
         },
         {

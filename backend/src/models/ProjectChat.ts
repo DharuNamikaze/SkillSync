@@ -1,5 +1,6 @@
 import { Schema, model, Model } from 'mongoose';
 
+// Database model interface
 export interface IProjectChat {
   projectId: string;
   userId: string;
@@ -7,6 +8,23 @@ export interface IProjectChat {
   userAvatar: string;
   message: string;
   timestamp: Date;
+  type: 'text' | 'system' | 'code';
+  codeBlock?: {
+    language: string;
+    content: string;
+  };
+}
+
+// Frontend response interface
+export interface IProjectChatResponse {
+  id: string;
+  content: string;
+  timestamp: Date;
+  sender: {
+    id: string;
+    name: string;
+    avatar: string;
+  };
   type: 'text' | 'system' | 'code';
   codeBlock?: {
     language: string;

@@ -1,395 +1,352 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Search, Send, Paperclip, MoreVertical, Phone, Video, User, Clock, Check, CheckCheck } from "lucide-react";
+import { Search, Send, Paperclip, MoreVertical, Phone, Video, User, Clock, Check, CheckCheck, Plus, XCircle, Users, Folder } from "lucide-react";
+import UserSearchDialog from './UserSearchDialog';
+import UserProfilePopup from './UserProfilePopup';
+import websocketService from '../services/websocketService';
+import { useAuth } from '../AuthContext';
+import { MessagesAPI } from '../lib/MessagesAPI';
+import { ProjectsAPI, UsersAPI } from '../lib/api';
+import { UserProfilePopup } from './UserProfilePopup';
 
 function Messages() {
+  const { user } = useAuth();
   const [conversations, setConversations] = useState([]);
-  const [activeConversation, setActiveConversation] = useState(null);
+  const [projects, setProjects] = useState([]);
+  const [activeChat, setActiveChat] = useState(null); // Can be a project or conversation
+  const [chatType, setChatType] = useState(null); // 'project' or 'private'
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
+  const [showUserSearch, setShowUserSearch] = useState(false);
+  const [showUserProfile, setShowUserProfile] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [typingUsers, setTypingUsers] = useState(new Set());
+  const [error, setError] = useState(null);
   const messagesEndRef = useRef(null);
 
-  // Simulate fetching conversations from API
+  // Fetch conversations and projects
   useEffect(() => {
-    const fetchConversations = async () => {
-      setLoading(true);
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // Mock data that would come from your backend
-      const mockConversations = [
-        {
-          id: "conv-1",
-          user: {
-            id: "user-1",
-            name: "Alex Johnson",
-            avatar: "https://ui-avatars.com/api/?name=Alex+Johnson&background=0D8ABC&color=fff",
-            status: "online",
-            lastSeen: null
-          },
-          unreadCount: 3,
-          lastMessage: {
-            text: "Hey, are you available for a quick project review?",
-            timestamp: new Date(Date.now() - 1000 * 60 * 15) // 15 minutes ago
-          }
-        },
-        {
-          id: "conv-2",
-          user: {
-            id: "user-2",
-            name: "Sarah Williams",
-            avatar: "https://ui-avatars.com/api/?name=Sarah+Williams&background=6366F1&color=fff",
-            status: "offline",
-            lastSeen: new Date(Date.now() - 1000 * 60 * 60) // 1 hour ago
-          },
-          unreadCount: 0,
-          lastMessage: {
-            text: "Thanks for your help with the UI design!",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3) // 3 hours ago
-          }
-        },
-        {
-          id: "conv-3",
-          user: {
-            id: "user-3",
-            name: "Michael Chen",
-            avatar: "https://ui-avatars.com/api/?name=Michael+Chen&background=10B981&color=fff",
-            status: "online",
-            lastSeen: null
-          },
-          unreadCount: 0,
-          lastMessage: {
-            text: "I've pushed the latest code changes to the repository.",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24) // 1 day ago
-          }
-        },
-        {
-          id: "conv-4",
-          user: {
-            id: "user-4",
-            name: "Emily Rodriguez",
-            avatar: "https://ui-avatars.com/api/?name=Emily+Rodriguez&background=F59E0B&color=fff",
-            status: "away",
-            lastSeen: new Date(Date.now() - 1000 * 60 * 30) // 30 minutes ago
-          },
-          unreadCount: 1,
-          lastMessage: {
-            text: "Can we schedule a call to discuss the project timeline?",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2) // 2 hours ago
-          }
-        },
-        {
-          id: "conv-5",
-          user: {
-            id: "user-5",
-            name: "David Kim",
-            avatar: "https://ui-avatars.com/api/?name=David+Kim&background=EF4444&color=fff",
-            status: "offline",
-            lastSeen: new Date(Date.now() - 1000 * 60 * 60 * 12) // 12 hours ago
-          },
-          unreadCount: 0,
-          lastMessage: {
-            text: "I'll send you the project requirements document tomorrow.",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48) // 2 days ago
-          }
+    let mounted = true;
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch projects the user is a member of
+        const projectsResponse = await ProjectsAPI.userProjects();
+        if (mounted) {
+          setProjects(projectsResponse.data || []);
         }
-      ];
-      
-      setConversations(mockConversations);
-      setLoading(false);
+
+        // Fetch private conversations
+        const conversationsResponse = await MessagesAPI.getConversations();
+        if (mounted) {
+          setConversations(conversationsResponse.data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        if (mounted) {
+          setError('Failed to load conversations and projects. Please try again later.');
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
     };
 
-    fetchConversations();
+    fetchData();
+    
+    // Poll for updates every 30 seconds
+    const pollInterval = setInterval(fetchData, 30000);
+
+    return () => {
+      mounted = false;
+      clearInterval(pollInterval);
+    };
   }, []);
 
   // Set first conversation as active when conversations are loaded
   useEffect(() => {
-    if (conversations.length > 0 && !activeConversation) {
-      setActiveConversation(conversations[0]);
+    if (conversations.length > 0 && !activeChat) {
+      setActiveChat(conversations[0]);
+      setChatType('private');
     }
-  }, [conversations, activeConversation]);
+  }, [conversations, activeChat]);
 
-  // Simulate fetching messages when active conversation changes
+    // Fetch messages when active chat changes
   useEffect(() => {
     const fetchMessages = async () => {
-      if (!activeConversation) return;
+      if (!activeChat) return;
       
-      setLoading(true);
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 600));
-      
-      // Generate mock messages based on conversation ID
-      const mockMessages = generateMockMessages(activeConversation.id);
-      setMessages(mockMessages);
-      setLoading(false);
+      try {
+        setLoading(true);
+        setMessages([]); // Clear previous messages while loading
+        
+        let response;
+        if (chatType === 'private') {
+          response = await MessagesAPI.getConversation(activeChat.user.id);
+          websocketService.markMessagesAsRead(activeChat.user.id);
+        } else if (chatType === 'project') {
+          console.log('Fetching project messages for:', activeChat.id);
+          response = await ProjectsAPI.getProjectMessages(activeChat.id);
+        }
+        
+        console.log('Project messages response:', response);
+        
+        if (!response.data) {
+          console.error('No data in response:', response);
+          throw new Error('No data received from server');
+        }
+
+        if (!Array.isArray(response.data)) {
+          console.error('Response data is not an array:', response.data);
+          throw new Error('Invalid response format from server');
+        }
+
+        // Transform messages if needed and validate required fields
+        const validMessages = response.data.map(message => {
+          // If message is in old format, transform it
+          if (message.message && message.userId && !message.content) {
+            return {
+              id: message.id || message._id,
+              content: message.message,
+              timestamp: message.timestamp || message.createdAt,
+              sender: {
+                id: message.userId,
+                name: message.userName,
+                avatar: message.userAvatar
+              },
+              type: message.type || 'text',
+              codeBlock: message.codeBlock
+            };
+          }
+          return message;
+        }).filter(message => {
+          const isValid = message &&
+            message.id &&
+            message.content &&
+            message.sender &&
+            message.sender.id &&
+            message.sender.name;
+
+          if (!isValid) {
+            console.warn('Invalid message format:', message);
+          }
+
+          return isValid;
+        });
+
+        if (validMessages.length < response.data.length) {
+          console.warn(`Filtered ${response.data.length - validMessages.length} invalid messages`);
+        }
+
+        
+
+        setMessages(validMessages.reverse());
+
+      } catch (error) {
+        console.error('Error loading messages:', error);
+        setError(error.message || 'Failed to load messages');
+        setMessages([]); // Clear messages on error
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchMessages();
-  }, [activeConversation]);
+
+    // Clear messages when chat changes
+    return () => {
+      setMessages([]);
+      setLoading(true);
+    };
+  }, [activeChat?.id, activeChat?.user?.id, chatType]); // Only depend on user ID to prevent unnecessary rerenders
+
+  // Handle WebSocket connections and message updates
+  useEffect(() => {
+    if (!activeChat || chatType !== 'private') return;
+
+    const cleanupFns = [];
+
+    // Connection status handler
+    cleanupFns.push(
+      websocketService.addConnectionHandler((connected) => {
+        console.log(`WebSocket ${connected ? 'connected' : 'disconnected'}`);
+      })
+    );
+
+    // Message listener
+    cleanupFns.push(
+      websocketService.onMessage(activeChat.user.id, (message) => {
+        setMessages(prev => {
+          // Check if message already exists (prevent duplicates)
+          if (prev.some(m => m.id === message.id)) {
+            return prev.map(m => m.id === message.id ? { ...m, ...message } : m);
+          }
+          return [...prev, message];
+        });
+        
+        // Mark messages as read since chat is open
+        websocketService.markMessagesAsRead(activeChat.user.id);
+      })
+    );
+
+    // Typing indicator listener
+    cleanupFns.push(
+      websocketService.onTyping(activeChat.user.id, (isTyping) => {
+        setTypingUsers(prev => {
+          const next = new Set(prev);
+          if (isTyping) {
+            next.add(activeChat.user.id);
+          } else {
+            next.delete(activeChat.user.id);
+          }
+          return next;
+        });
+      })
+    );
+
+    // Read receipt listener
+    cleanupFns.push(
+      websocketService.onMessagesRead(activeChat.user.id, () => {
+        setMessages(prev => 
+          prev.map(msg => 
+            msg.sender.id === user.id ? { ...msg, status: 'read' } : msg
+          )
+        );
+      })
+    );
+
+    return () => {
+      cleanupFns.forEach(cleanup => cleanup());
+      setTypingUsers(new Set()); // Clear typing indicators on cleanup
+    };
+  }, [activeChat?.user?.id, chatType, user?.id]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Generate mock messages for a conversation
-  const generateMockMessages = (conversationId) => {
-    const currentUser = { id: "current-user", name: "You" };
-    const otherUser = conversations.find(conv => conv.id === conversationId)?.user;
+  // Error notification component
+  const ErrorNotification = ({ message, onDismiss }) => {
+    if (!message) return null;
     
-    if (!otherUser) return [];
-    
-    // Generate a different conversation based on the conversation ID
-    switch(conversationId) {
-      case "conv-1": // Alex Johnson
-        return [
-          {
-            id: "msg-1-1",
-            sender: otherUser,
-            text: "Hi there! I was wondering if you could help me with a React component I'm building.",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60), // 1 hour ago
-            status: "read"
-          },
-          {
-            id: "msg-1-2",
-            sender: currentUser,
-            text: "Sure, I'd be happy to help. What kind of component are you working on?",
-            timestamp: new Date(Date.now() - 1000 * 60 * 55), // 55 minutes ago
-            status: "read"
-          },
-          {
-            id: "msg-1-3",
-            sender: otherUser,
-            text: "It's a data visualization component that needs to handle real-time updates. I'm having trouble with the state management.",
-            timestamp: new Date(Date.now() - 1000 * 60 * 50), // 50 minutes ago
-            status: "read"
-          },
-          {
-            id: "msg-1-4",
-            sender: currentUser,
-            text: "Have you tried using useReducer for complex state logic? Or maybe a context provider if you need to share the state across components?",
-            timestamp: new Date(Date.now() - 1000 * 60 * 45), // 45 minutes ago
-            status: "read"
-          },
-          {
-            id: "msg-1-5",
-            sender: otherUser,
-            text: "I haven't tried useReducer yet. That's a good suggestion. Do you have time for a quick call to go over the implementation?",
-            timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-            status: "read"
-          },
-          {
-            id: "msg-1-6",
-            sender: otherUser,
-            text: "I've also been looking at some libraries like Redux or MobX, but I'm not sure if that would be overkill for this project.",
-            timestamp: new Date(Date.now() - 1000 * 60 * 25), // 25 minutes ago
-            status: "read"
-          },
-          {
-            id: "msg-1-7",
-            sender: currentUser,
-            text: "For a single component, Redux might be overkill. Let's start with useReducer and see if that solves your problem.",
-            timestamp: new Date(Date.now() - 1000 * 60 * 20), // 20 minutes ago
-            status: "read"
-          },
-          {
-            id: "msg-1-8",
-            sender: otherUser,
-            text: "Hey, are you available for a quick project review?",
-            timestamp: new Date(Date.now() - 1000 * 60 * 15), // 15 minutes ago
-            status: "delivered"
-          }
-        ];
-      case "conv-2": // Sarah Williams
-        return [
-          {
-            id: "msg-2-1",
-            sender: currentUser,
-            text: "Hi Sarah, I've finished the UI mockups for the dashboard. Would you like to review them?",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5), // 5 hours ago
-            status: "read"
-          },
-          {
-            id: "msg-2-2",
-            sender: otherUser,
-            text: "Yes, please send them over! I'm excited to see what you've come up with.",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4.5), // 4.5 hours ago
-            status: "read"
-          },
-          {
-            id: "msg-2-3",
-            sender: currentUser,
-            text: "Here you go! I've attached the Figma link. Let me know what you think.",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4), // 4 hours ago
-            status: "read"
-          },
-          {
-            id: "msg-2-4",
-            sender: otherUser,
-            text: "These look amazing! I love the color scheme and the layout is very intuitive.",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3.5), // 3.5 hours ago
-            status: "read"
-          },
-          {
-            id: "msg-2-5",
-            sender: otherUser,
-            text: "Thanks for your help with the UI design!",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3), // 3 hours ago
-            status: "read"
-          }
-        ];
-      case "conv-3": // Michael Chen
-        return [
-          {
-            id: "msg-3-1",
-            sender: otherUser,
-            text: "Hey, I'm working on the backend API for our project. Do you have the endpoint specifications ready?",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 30), // 30 hours ago
-            status: "read"
-          },
-          {
-            id: "msg-3-2",
-            sender: currentUser,
-            text: "I'm still finalizing them, but I can send you what I have so far. Give me a few minutes.",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 29), // 29 hours ago
-            status: "read"
-          },
-          {
-            id: "msg-3-3",
-            sender: currentUser,
-            text: "Here's the preliminary API spec. I'll update you when I have the final version.",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 28), // 28 hours ago
-            status: "read"
-          },
-          {
-            id: "msg-3-4",
-            sender: otherUser,
-            text: "Thanks! This gives me enough to get started. I'll implement the basic structure and we can refine it later.",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 26), // 26 hours ago
-            status: "read"
-          },
-          {
-            id: "msg-3-5",
-            sender: otherUser,
-            text: "I've pushed the latest code changes to the repository.",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 24 hours ago
-            status: "read"
-          }
-        ];
-      case "conv-4": // Emily Rodriguez
-        return [
-          {
-            id: "msg-4-1",
-            sender: otherUser,
-            text: "Hi! I wanted to discuss the project timeline. We might need to adjust some deadlines.",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4), // 4 hours ago
-            status: "read"
-          },
-          {
-            id: "msg-4-2",
-            sender: currentUser,
-            text: "What's causing the delay? Is there anything I can help with?",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3.8), // 3.8 hours ago
-            status: "read"
-          },
-          {
-            id: "msg-4-3",
-            sender: otherUser,
-            text: "We're waiting on some assets from the design team, and there were some unexpected technical challenges with the integration.",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3.5), // 3.5 hours ago
-            status: "read"
-          },
-          {
-            id: "msg-4-4",
-            sender: currentUser,
-            text: "I see. Let me know which specific assets you're waiting for, and I can follow up with the design team.",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3), // 3 hours ago
-            status: "read"
-          },
-          {
-            id: "msg-4-5",
-            sender: otherUser,
-            text: "Can we schedule a call to discuss the project timeline?",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-            status: "delivered"
-          }
-        ];
-      case "conv-5": // David Kim
-        return [
-          {
-            id: "msg-5-1",
-            sender: currentUser,
-            text: "Hi David, do you have the project requirements document ready?",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 72), // 3 days ago
-            status: "read"
-          },
-          {
-            id: "msg-5-2",
-            sender: otherUser,
-            text: "I'm still working on finalizing it. There are a few details I need to confirm with the client.",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 70), // ~3 days ago
-            status: "read"
-          },
-          {
-            id: "msg-5-3",
-            sender: currentUser,
-            text: "No problem. When do you think it will be ready? I'd like to start planning my work.",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 65), // ~2.7 days ago
-            status: "read"
-          },
-          {
-            id: "msg-5-4",
-            sender: otherUser,
-            text: "I should have it by tomorrow. Sorry for the delay!",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 60), // 2.5 days ago
-            status: "read"
-          },
-          {
-            id: "msg-5-5",
-            sender: otherUser,
-            text: "I'll send you the project requirements document tomorrow.",
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48), // 2 days ago
-            status: "read"
-          }
-        ];
-      default:
-        return [];
-    }
+    return (
+      <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded-md shadow-sm flex items-center space-x-2">
+        <span>{message}</span>
+        <button
+          onClick={onDismiss}
+          className="text-red-500 hover:text-red-700 focus:outline-none"
+        >
+          <XCircle className="h-5 w-5" />
+        </button>
+      </div>
+    );
   };
 
   // Handle sending a new message
-  const handleSendMessage = (e) => {
+  const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || !activeConversation) return;
+    if (!newMessage.trim() || !activeChat) return;
 
-    const newMsg = {
-      id: `msg-new-${Date.now()}`,
-      sender: { id: "current-user", name: "You" },
-      text: newMessage,
-      timestamp: new Date(),
-      status: "sending"
+    const timestamp = new Date();
+    const messageId = `temp-${timestamp.getTime()}`;
+    const optimisticMessage = {
+      id: messageId,
+      sender: user,
+      content: newMessage.trim(),
+      timestamp,
+      status: 'sending'
     };
 
-    setMessages(prev => [...prev, newMsg]);
-    setNewMessage("");
+    if (chatType === 'private') {
+      optimisticMessage.recipient = activeChat.user;
+    } else {
+      optimisticMessage.projectId = activeChat.id;
+    }
 
-    // Simulate message sending and status updates
-    setTimeout(() => {
+    try {
+      // Add optimistic message
+      setMessages(prev => [...prev, optimisticMessage]);
+      setNewMessage('');
+
+      if (chatType === 'private') {
+        // Send via WebSocket for private messages
+        await websocketService.sendMessage(activeChat.user.id, optimisticMessage.content);
+      } else {
+        // Send project message via API
+        await ProjectsAPI.sendProjectMessage(activeChat.id, {
+          message: optimisticMessage.content,
+          userName: user.name,
+          userAvatar: user.picture || user.avatar
+        });
+      }
+      
+      // Update message status to sent
       setMessages(prev => 
         prev.map(msg => 
-          msg.id === newMsg.id ? { ...msg, status: "sent" } : msg
+          msg.id === messageId 
+            ? { ...msg, status: 'sent' }
+            : msg
+        )
+      );
+
+    } catch (error) {
+      console.error('Error sending message:', error);
+      
+      // Update message status to error
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === messageId 
+            ? { ...msg, status: 'error', error: error.message }
+            : msg
         )
       );
       
-      setTimeout(() => {
-        setMessages(prev => 
-          prev.map(msg => 
-            msg.id === newMsg.id ? { ...msg, status: "delivered" } : msg
-          )
-        );
-      }, 1000);
-    }, 1000);
+      setError('Failed to send message. Please try again.');
+    }
+  };
+
+  // Handle user profile click in project chat
+  const handleUserProfileClick = async (userId) => {
+    try {
+      const response = await UsersAPI.get(userId);
+      setSelectedUser(response.data);
+      setShowUserProfile(true);
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      setError('Failed to load user profile');
+    }
+  };
+
+  // Handle starting a private chat from profile
+  const handleStartPrivateChat = (user) => {
+    const existingConversation = conversations.find(conv => conv.user.id === user.id);
+    
+    if (existingConversation) {
+      setActiveChat(existingConversation);
+    } else {
+      const newConversation = {
+        id: `conv-${user.id}`,
+        user: {
+          id: user.id,
+          name: user.name,
+          avatar: user.picture || user.avatar,
+          status: 'offline',
+          lastSeen: null
+        },
+        unreadCount: 0,
+        lastMessage: null
+      };
+      
+      setConversations(prev => [newConversation, ...prev]);
+      setActiveChat(newConversation);
+    }
+    
+    setChatType('private');
+    setShowUserProfile(false);
   };
 
   // Format timestamp to readable format
@@ -439,25 +396,40 @@ function Messages() {
   return (
     <div className="h-[calc(100vh-64px)] flex flex-col bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       <div className="flex flex-1 overflow-hidden">
+        {/* Error Notification */}
+        <ErrorNotification 
+          message={error} 
+          onDismiss={() => setError(null)} 
+        />
+        
         {/* Sidebar - Conversation List */}
         <div className="w-full md:w-80 lg:w-96 border-r border-gray-200 bg-white flex flex-col">
           <div className="p-4 border-b border-gray-200">
+            <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold text-gray-800">Messages</h2>
-            <div className="mt-2 relative">
-              <input
-                type="text"
-                placeholder="Search conversations"
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-            </div>
+            <button
+              onClick={() => setShowUserSearch(true)}
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+              title="Start new conversation"
+            >
+              <Plus className="h-5 w-5 text-gray-600" />
+            </button>
+          </div>
+          <div className="mt-2 relative">
+            <input
+              type="text"
+              placeholder="Search conversations"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+          </div>
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            {loading && !conversations.length ? (
-              // Loading skeleton for conversations
+            {loading ? (
+              // Loading skeleton
               <div className="p-4 space-y-4">
                 {[...Array(5)].map((_, i) => (
                   <div key={i} className="flex items-center space-x-3">
@@ -471,12 +443,60 @@ function Messages() {
               </div>
             ) : (
               <div>
+                {/* Projects Section */}
+                <div className="px-4 py-2 bg-gray-50 border-b border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-600 flex items-center">
+                    <Folder className="h-4 w-4 mr-1" />
+                    Project Chats
+                  </h3>
+                </div>
+                {projects
+                  .filter(project => project.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                  .map(project => (
+                    <button
+                      key={project.id}
+                      className={`w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors flex items-center space-x-3 ${
+                        activeChat?.id === project.id && chatType === 'project' ? 'bg-blue-50' : ''
+                      }`}
+                      onClick={() => {
+                        setActiveChat(project);
+                        setChatType('project');
+                        setSelectedUser(null);
+                      }}
+                    >
+                      <div className="relative">
+                        <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                          <Users className="h-6 w-6 text-blue-600" />
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-baseline">
+                          <h3 className="font-medium text-gray-900 truncate">{project.name}</h3>
+                          <span className="text-xs text-gray-500">{project.members.current} members</span>
+                        </div>
+                        <p className="text-sm text-gray-600 truncate">{project.department}</p>
+                      </div>
+                    </button>
+                  ))}
+
+                {/* Private Chats Section */}
+                <div className="px-4 py-2 bg-gray-50 border-b border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-600 flex items-center">
+                    <User className="h-4 w-4 mr-1" />
+                    Private Messages
+                  </h3>
+                </div>
                 {filteredConversations.length > 0 ? (
                   filteredConversations.map(conversation => (
                     <button
                       key={conversation.id}
-                      className={`w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors flex items-center space-x-3 ${activeConversation?.id === conversation.id ? 'bg-blue-50' : ''}`}
-                      onClick={() => setActiveConversation(conversation)}
+                      className={`w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors flex items-center space-x-3 ${
+                        activeChat?.id === conversation.id && chatType === 'private' ? 'bg-blue-50' : ''
+                      }`}
+                      onClick={() => {
+                        setActiveChat(conversation);
+                        setChatType('private');
+                      }}
                     >
                       <div className="relative">
                         <img 
@@ -484,7 +504,11 @@ function Messages() {
                           alt={conversation.user.name}
                           className="h-12 w-12 rounded-full object-cover"
                         />
-                        <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white ${conversation.user.status === 'online' ? 'bg-green-500' : conversation.user.status === 'away' ? 'bg-yellow-500' : 'bg-gray-400'}`}></span>
+                        <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white ${
+                          conversation.user.status === 'online' ? 'bg-green-500' : 
+                          conversation.user.status === 'away' ? 'bg-yellow-500' : 
+                          'bg-gray-400'
+                        }`}></span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-baseline">
@@ -493,16 +517,16 @@ function Messages() {
                         </div>
                         <p className="text-sm text-gray-600 truncate">{conversation.lastMessage?.text}</p>
                       </div>
-                      {conversation.unreadCount > 0 && (
+                      {Number(conversation.unreadCount) > 0 && (
                         <span className="bg-blue-500 text-white text-xs font-medium rounded-full h-5 w-5 flex items-center justify-center">
-                          {conversation.unreadCount}
+                          {Number(conversation.unreadCount)}
                         </span>
                       )}
                     </button>
                   ))
                 ) : (
                   <div className="p-4 text-center text-gray-500">
-                    No conversations found
+                    No private conversations found
                   </div>
                 )}
               </div>
@@ -512,36 +536,63 @@ function Messages() {
 
         {/* Main Chat Area */}
         <div className="hidden md:flex flex-col flex-1 bg-gray-50">
-          {activeConversation ? (
+          {activeChat ? (
             <>
               {/* Chat Header */}
               <div className="px-6 py-3 border-b border-gray-200 bg-white flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <img 
-                    src={activeConversation.user.avatar} 
-                    alt={activeConversation.user.name}
-                    className="h-10 w-10 rounded-full object-cover"
-                  />
-                  <div>
-                    <h3 className="font-medium text-gray-900">{activeConversation.user.name}</h3>
-                    <p className="text-xs text-gray-500">
-                      {activeConversation.user.status === 'online' 
-                        ? 'Online' 
-                        : activeConversation.user.status === 'away'
-                          ? 'Away'
-                          : `Last seen ${formatTimestamp(activeConversation.user.lastSeen)}`
-                      }
-                    </p>
-                  </div>
+                  {chatType === 'private' ? (
+                    <>
+                      <img 
+                        src={activeChat.user.avatar} 
+                        alt={activeChat.user.name}
+                        className="h-10 w-10 rounded-full object-cover"
+                      />
+                      <div>
+                        <h3 className="font-medium text-gray-900">{activeChat.user.name}</h3>
+                        <p className="text-xs text-gray-500">
+                          {activeChat.user.status === 'online' 
+                            ? 'Online' 
+                            : activeChat.user.status === 'away'
+                              ? 'Away'
+                              : `Last seen ${formatTimestamp(activeChat.user.lastSeen)}`
+                          }
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                        <Users className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-gray-900">{activeChat.name}</h3>
+                        <p className="text-xs text-gray-500">
+                          {activeChat.members.current} team members • {activeChat.department}
+                        </p>
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="flex items-center space-x-3">
-                  <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-                    <Phone className="h-5 w-5 text-gray-600" />
-                  </button>
-                  <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-                    <Video className="h-5 w-5 text-gray-600" />
-                  </button>
-                  <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                  {chatType === 'private' && (
+                    <>
+                      <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                        <Phone className="h-5 w-5 text-gray-600" />
+                      </button>
+                      <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                        <Video className="h-5 w-5 text-gray-600" />
+                      </button>
+                    </>
+                  )}
+                  <button 
+                    onClick={() => {
+                      if (chatType === 'project') {
+                        setShowUserSearch(true);
+                      }
+                    }}
+                    className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                  >
                     <MoreVertical className="h-5 w-5 text-gray-600" />
                   </button>
                 </div>
@@ -563,11 +614,11 @@ function Messages() {
                   </div>
                 ) : (
                   messages.map(message => {
-                    const isCurrentUser = message.sender.id === "current-user";
+                    const isCurrentUser = message.sender.id === user.id;
                     return (
                       <div key={message.id} className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
                         <div className={`max-w-[70%] ${isCurrentUser ? 'bg-blue-500 text-white' : 'bg-white'} rounded-lg px-4 py-2 shadow-sm`}>
-                          <p>{message.text}</p>
+                          <p>{message.sender.name}: {message.content}</p>
                           <div className={`text-xs mt-1 flex items-center justify-end space-x-1 ${isCurrentUser ? 'text-blue-100' : 'text-gray-500'}`}>
                             <span>{formatTimestamp(message.timestamp)}</span>
                             {isCurrentUser && renderMessageStatus(message.status)}
@@ -630,6 +681,58 @@ function Messages() {
           </div>
         </div>
       </div>
+
+      {/* User Search Dialog */}
+      {showUserSearch && (
+        <UserSearchDialog
+          onClose={() => setShowUserSearch(false)}
+          onSelectUser={(user) => {
+            if (chatType === 'project') {
+              handleUserProfileClick(user.id);
+            } else {
+              // Start new conversation
+              setConversations(prev => {
+                const exists = prev.find(conv => conv.user.id === user.id);
+                if (exists) {
+                  setActiveChat(exists);
+                  setChatType('private');
+                  return prev;
+                }
+
+                const newConversation = {
+                  id: `conv-${user.id}`,
+                  user: {
+                    id: user.id,
+                    name: user.name,
+                    avatar: user.avatar,
+                    status: 'offline',
+                    lastSeen: null
+                  },
+                  unreadCount: 0,
+                  lastMessage: null
+                };
+                
+                setActiveChat(newConversation);
+                setChatType('private');
+                return [newConversation, ...prev];
+              });
+            }
+            setShowUserSearch(false);
+          }}
+        />
+      )}
+
+      {/* User Profile Popup */}
+      {showUserProfile && selectedUser && (
+        <UserProfilePopup
+          user={selectedUser}
+          onClose={() => {
+            setShowUserProfile(false);
+            setSelectedUser(null);
+          }}
+          onStartChat={handleStartPrivateChat}
+        />
+      )}
     </div>
   );
 }

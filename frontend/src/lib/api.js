@@ -63,7 +63,7 @@ async function request(path, { method = "GET", body, auth = false, params } = {}
 
 export const ProjectsAPI = {
   list(params) {
-    return request("/projects", { params });
+    return request("/projects", { params, auth: true });
   },
   stats() {
     return request("/projects/stats");

@@ -67,11 +67,11 @@ export function AuthProvider({ children }) {
         email: decoded.email
       });
       setUser({
-        id: data.user.id,
-        sub: decoded.sub,
+        id: decoded.id,
         email: decoded.email,
         name: decoded.name,
-        picture: decoded.picture
+        picture: decoded.picture,
+        googleId: decoded.googleId
       });
 
     } catch (e) {

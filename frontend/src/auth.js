@@ -20,9 +20,12 @@ export function clearAuthToken() {
 
 export function getAuthToken() {
   try {
-    return localStorage.getItem(AUTH_STORAGE_KEY);
+    const token = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!token) return null;
+    return token;
   } catch(e) {
-    return (e,"Error fetching Token, check if the token acutally exists GET");
+    console.error("Error fetching token:", e);
+    return null;
   }
 }
 

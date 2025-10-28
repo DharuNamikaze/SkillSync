@@ -1,4 +1,4 @@
-import ProjectChat, { IProjectChat } from '../models/ProjectChat';
+import ProjectChat, { IProjectChat, IProjectChatResponse } from '../models/ProjectChat';
 import Project from '../models/Project';
 import { createError } from '../middleware/errorHandler';
 
@@ -15,12 +15,29 @@ export class ProjectChatService {
   }): Promise<IProjectChat> {
     try {
       // Check if user is a member of the project
-      const project = await Project.findById(projectId);
-      if (!project) {
-        throw createError('Project not found', 404);
+      console.log('Checking project access:', { projectId, userId });
+      
+      if (!projectId) {
+        console.log('Project ID is missing');
+        throw createError('Project ID is required', 400);
       }
 
+      const project = await Project.findById(projectId);
+      if (!project) {
+        console.log('Project not found:', { projectId });
+        throw createError(`Project not found with ID: ${projectId}`, 404);
+      }
+
+      console.log('Project members check:', {
+        projectId,
+        userId,
+        members: project.members.userIds,
+        isMember: project.members.userIds.includes(userId),
+        createdBy: project.createdBy
+      });
+
       if (!project.members.userIds.includes(userId)) {
+        console.log('User not authorized:', { userId, projectMembers: project.members.userIds });
         throw createError('Not authorized to chat in this project', 403);
       }
 
@@ -45,7 +62,7 @@ export class ProjectChatService {
   async getProjectMessages(projectId: string, userId: string, options: {
     limit?: number;
     before?: Date;
-  } = {}): Promise<IProjectChat[]> {
+  } = {}): Promise<IProjectChatResponse[]> {
     try {
       // Check if user is a member of the project
       const project = await Project.findById(projectId);
@@ -63,10 +80,24 @@ export class ProjectChatService {
       }
 
       const messages = await ProjectChat.find(query)
-        .sort({ timestamp: -1 })
+        .sort({ timestamp: 1 })
         .limit(options.limit || 50);
 
-      return messages;
+      // Transform messages to match frontend expectations
+      const transformedMessages = messages.map(message => ({
+        id: message.id,
+        content: message.message,
+        timestamp: message.timestamp,
+        sender: {
+          id: message.userId,
+          name: message.userName,
+          avatar: message.userAvatar
+        },
+        type: message.type,
+        codeBlock: message.codeBlock
+      }));
+
+      return transformedMessages;
     } catch (error) {
       console.error('Get project messages error:', error);
       throw error;

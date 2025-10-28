@@ -4,6 +4,11 @@ import { body, validationResult, param, query } from 'express-validator';
 export const handleValidationErrors = (req: Request, res: Response, next: NextFunction) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    console.log('Validation errors:', {
+      path: req.path,
+      body: req.body,
+      errors: errors.array()
+    });
     return res.status(400).json({
       ok: false,
       error: 'Validation failed',
@@ -81,6 +86,15 @@ export const validateUpdateProject = [
 ];
 
 export const validateProjectId = [
+  (req: Request, res: Response, next: NextFunction) => {
+    console.log('validateProjectId middleware:', {
+      params: req.params,
+      path: req.path,
+      baseUrl: req.baseUrl,
+      originalUrl: req.originalUrl
+    });
+    next();
+  },
   param('id').isMongoId(),
   handleValidationErrors
 ];
@@ -89,7 +103,7 @@ export const validateProjectId = [
 export const validateMessageContent = [
   body('message').trim().isLength({ min: 1, max: 2000 }),
   body('userName').trim().isLength({ min: 1, max: 100 }),
-  body('userAvatar').isURL(),
+  body('userAvatar').optional().isString(),  // Made optional and just require it to be a string
   body('type').optional().isIn(['text', 'system', 'code']),
   body('codeBlock').optional().isObject(),
   body('codeBlock.language').optional().isString(),
@@ -117,5 +131,16 @@ export const validateNotificationQuery = [
 
 export const validateNotificationId = [
   param('id').isMongoId(),
+  handleValidationErrors
+];
+
+// Message validation rules
+export const validatePartnerId = [
+  param('partnerId').isMongoId().withMessage('Invalid partner ID'),
+  handleValidationErrors
+];
+
+export const validateMessage = [
+  body('content').trim().isLength({ min: 1, max: 5000 }).withMessage('Message content is required and must be between 1 and 5000 characters'),
   handleValidationErrors
 ];

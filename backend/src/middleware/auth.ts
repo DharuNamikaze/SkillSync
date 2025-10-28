@@ -104,9 +104,10 @@ export const createAuthToken = (user: any): string => {
   // Create a token with user information
   return jwt.sign(
     {
-      id: user._id,
+      id: user._id.toString(),
       email: user.email,
       name: user.name,
+      picture: user.picture,
       googleId: user.googleId
     },
     JWT_SECRET,

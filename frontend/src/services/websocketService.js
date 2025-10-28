@@ -1,149 +1,207 @@
-import { useAuth } from '../AuthContext';
+import io from 'socket.io-client';
 
 class WebSocketService {
+  socket = null;
+  messageHandlers = new Map();
+  typingHandlers = new Map();
+  readReceiptHandlers = new Map();
+  connectionHandlers = new Set();
+  messageQueue = new Map();
+  reconnectAttempts = 0;
+  maxReconnectAttempts = 5;
+  reconnectInterval = null;
+
   constructor() {
-    this.ws = null;
-    this.subscribers = new Map();
-    this.reconnectAttempts = 0;
-    this.maxReconnectAttempts = 5;
-    this.reconnectTimeout = 1000; // Start with 1s timeout
+    this.connect = this.connect.bind(this);
+    this.disconnect = this.disconnect.bind(this);
+    this.sendMessage = this.sendMessage.bind(this);
+    this.onMessage = this.onMessage.bind(this);
+    this.emitTyping = this.emitTyping.bind(this);
+    this.onTyping = this.onTyping.bind(this);
+    this.markMessagesAsRead = this.markMessagesAsRead.bind(this);
+    this.onMessagesRead = this.onMessagesRead.bind(this);
+    this.onConnectionChange = this.onConnectionChange.bind(this);
+    this.processMessageQueue = this.processMessageQueue.bind(this);
+  }
+
+  onConnectionChange(connected) {
+    this.connectionHandlers.forEach(handler => handler(connected));
+    if (connected) {
+      this.reconnectAttempts = 0;
+      if (this.reconnectInterval) {
+        clearInterval(this.reconnectInterval);
+        this.reconnectInterval = null;
+      }
+      this.processMessageQueue();
+    }
+  }
+
+  addConnectionHandler(handler) {
+    this.connectionHandlers.add(handler);
+    if (this.socket) {
+      handler(this.socket.connected);
+    }
+    return () => this.connectionHandlers.delete(handler);
+  }
+
+  async processMessageQueue() {
+    if (!this.socket?.connected) return;
+
+    for (const [key, { recipientId, content, resolve, reject }] of this.messageQueue.entries()) {
+      try {
+        await this.sendMessage(recipientId, content);
+        resolve();
+      } catch (error) {
+        reject(error);
+      } finally {
+        this.messageQueue.delete(key);
+      }
+    }
   }
 
   connect(token) {
-    if (this.ws?.readyState === WebSocket.OPEN) return;
+    if (this.socket) {
+      this.socket.disconnect();
+    }
 
-    // Use secure WebSocket in production
-    const wsUrl = process.env.NODE_ENV === 'production'
-      ? `wss://${window.location.host}/ws`
-      : `ws://localhost:3000/ws`;
+    this.socket = io(import.meta.env.VITE_API_URL, {
+      auth: { token },
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: this.maxReconnectAttempts,
+    });
 
-    this.ws = new WebSocket(wsUrl);
-    
-    // Add auth token to connection
-    this.ws.onopen = () => {
-      this.ws.send(JSON.stringify({ type: 'auth', token }));
-      this.reconnectAttempts = 0;
-      this.reconnectTimeout = 1000;
-    };
+    this.socket.on('connect', () => {
+      console.log('WebSocket connected');
+      this.onConnectionChange(true);
+    });
 
-    this.ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        this.handleMessage(data);
-      } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
-      }
-    };
+    this.socket.on('disconnect', () => {
+      console.log('WebSocket disconnected');
+      this.onConnectionChange(false);
+    });
 
-    this.ws.onclose = () => {
-      this.handleDisconnect();
-    };
-
-    this.ws.onerror = (error) => {
+    this.socket.on('connect_error', (error) => {
       console.error('WebSocket error:', error);
-      this.ws?.close();
-    };
-  }
-
-  handleDisconnect() {
-    if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
-      this.reconnectTimeout *= 2; // Exponential backoff
-      setTimeout(() => this.connect(), this.reconnectTimeout);
-    }
-  }
-
-  handleMessage(data) {
-    switch (data.type) {
-      case 'message':
-        this.notifySubscribers('message', data);
-        break;
-      case 'typing':
-        this.notifySubscribers('typing', data);
-        break;
-      case 'status':
-        this.notifySubscribers('status', data);
-        break;
-      default:
-        console.warn('Unknown message type:', data.type);
-    }
-  }
-
-  subscribe(event, callback) {
-    if (!this.subscribers.has(event)) {
-      this.subscribers.set(event, new Set());
-    }
-    this.subscribers.get(event).add(callback);
-
-    // Return unsubscribe function
-    return () => {
-      const callbacks = this.subscribers.get(event);
-      if (callbacks) {
-        callbacks.delete(callback);
-        if (callbacks.size === 0) {
-          this.subscribers.delete(event);
-        }
+      
+      if (this.reconnectAttempts >= this.maxReconnectAttempts && !this.reconnectInterval) {
+        this.reconnectInterval = setInterval(() => {
+          if (this.socket?.connected) {
+            clearInterval(this.reconnectInterval);
+            this.reconnectInterval = null;
+            return;
+          }
+          console.log('Attempting to reconnect...');
+          this.connect(token);
+        }, 10000);
       }
-    };
-  }
+    });
 
-  notifySubscribers(event, data) {
-    const callbacks = this.subscribers.get(event);
-    if (callbacks) {
-      callbacks.forEach(callback => callback(data));
-    }
-  }
+    // Set up message handlers
+    this.socket.on('new_message', (message) => {
+      const handler = this.messageHandlers.get(message.sender);
+      if (handler) {
+        handler(message);
+      }
+    });
 
-  sendMessage(recipientId, content) {
-    if (this.ws?.readyState !== WebSocket.OPEN) {
-      throw new Error('WebSocket is not connected');
-    }
+    this.socket.on('message_sent', (message) => {
+      const handler = this.messageHandlers.get(message.recipient);
+      if (handler) {
+        handler(message);
+      }
+    });
 
-    this.ws.send(JSON.stringify({
-      type: 'message',
-      recipientId,
-      content
-    }));
-  }
+    // Set up typing handlers
+    this.socket.on('user_typing', ({ userId, isTyping }) => {
+      const handler = this.typingHandlers.get(userId);
+      if (handler) {
+        handler(isTyping);
+      }
+    });
 
-  sendTyping(recipientId, isTyping) {
-    if (this.ws?.readyState !== WebSocket.OPEN) return;
-
-    this.ws.send(JSON.stringify({
-      type: 'typing',
-      recipientId,
-      isTyping
-    }));
+    // Set up read receipt handlers
+    this.socket.on('messages_read', ({ userId }) => {
+      const handler = this.readReceiptHandlers.get(userId);
+      if (handler) {
+        handler();
+      }
+    });
   }
 
   disconnect() {
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
+    if (this.reconnectInterval) {
+      clearInterval(this.reconnectInterval);
+      this.reconnectInterval = null;
     }
-    this.subscribers.clear();
+    
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
+    }
+
+    this.messageHandlers.clear();
+    this.typingHandlers.clear();
+    this.readReceiptHandlers.clear();
+    this.connectionHandlers.clear();
+    this.messageQueue.clear();
+    this.reconnectAttempts = 0;
+  }
+
+  async sendMessage(recipientId, content) {
+    if (!this.socket?.connected) {
+      return new Promise((resolve, reject) => {
+        const messageId = Date.now().toString();
+        this.messageQueue.set(messageId, {
+          recipientId,
+          content,
+          resolve,
+          reject
+        });
+      });
+    }
+
+    return new Promise((resolve, reject) => {
+      this.socket.emit('send_message', { recipientId, content }, (error) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve();
+        }
+      });
+    });
+  }
+
+  onMessage(userId, callback) {
+    this.messageHandlers.set(userId, callback);
+    return () => this.messageHandlers.delete(userId);
+  }
+
+  emitTyping(recipientId, isTyping) {
+    if (!this.socket) {
+      throw new Error('WebSocket not connected');
+    }
+    this.socket.emit('typing', { recipientId, isTyping });
+  }
+
+  onTyping(userId, callback) {
+    this.typingHandlers.set(userId, callback);
+    return () => this.typingHandlers.delete(userId);
+  }
+
+  markMessagesAsRead(conversationPartnerId) {
+    if (!this.socket) {
+      throw new Error('WebSocket not connected');
+    }
+    this.socket.emit('mark_read', { conversationPartnerId });
+  }
+
+  onMessagesRead(userId, callback) {
+    this.readReceiptHandlers.set(userId, callback);
+    return () => this.readReceiptHandlers.delete(userId);
   }
 }
 
-// Create a singleton instance
-const websocketService = new WebSocketService();
-export default websocketService;
-
-// Custom hook for using WebSocket in components
-export function useWebSocket() {
-  const { user } = useAuth();
-
-  const connect = () => {
-    if (user?.token) {
-      websocketService.connect(user.token);
-    }
-  };
-
-  return {
-    connect,
-    sendMessage: websocketService.sendMessage.bind(websocketService),
-    sendTyping: websocketService.sendTyping.bind(websocketService),
-    subscribe: websocketService.subscribe.bind(websocketService),
-    disconnect: websocketService.disconnect.bind(websocketService),
-  };
-}
+export default new WebSocketService();

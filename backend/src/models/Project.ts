@@ -23,7 +23,8 @@ const projectSchema = new Schema<IProject>(
     members: {
       current: { type: Number, default: 0, min: 0 },
       max: { type: Number, required: true, min: 1 },
-      userIds: [{ type: String }]
+      userIds: [{ type: String }],
+      avatars: [{ type: String }]
     },
     progress: { type: Number, default: 0, min: 0, max: 100 },
     deadline: { type: Date, required: true },
