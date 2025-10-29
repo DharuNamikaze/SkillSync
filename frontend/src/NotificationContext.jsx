@@ -24,7 +24,7 @@ export const NotificationProvider = ({ children }) => {
         const token = getAuthToken();
         if (!token) return;
 
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/notifications/unread-count`, {
+        const res = await fetch(`${process.env.VITE_API_URL || 'http://localhost:3001/api'}/notifications/unread-count`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -89,7 +89,7 @@ export const NotificationProvider = ({ children }) => {
   const markAsRead = async (notificationId) => {
     try {
       const token = getAuthToken();
-      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/notifications/${notificationId}/read`, {
+      await fetch(`${process.env.VITE_API_URL || 'http://localhost:3001/api'}/notifications/${notificationId}/read`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       });

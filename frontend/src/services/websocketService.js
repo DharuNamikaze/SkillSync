@@ -43,7 +43,7 @@ class WebSocketService {
     }
 
     // Extract base URL (remove /api if present)
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+    const apiUrl = process.env.VITE_API_URL || 'http://localhost:3001/api';
     const wsUrl = apiUrl.replace('/api', '');
 
     this.socket = io(wsUrl, {

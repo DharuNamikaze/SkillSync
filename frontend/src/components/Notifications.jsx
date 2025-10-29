@@ -41,7 +41,7 @@ const Notifications = () => {
           unreadOnly: String(showUnreadOnly),
           limit: '100'
         }).toString();
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/notifications?${params}`, {
+        const res = await fetch(`${process.env.VITE_API_URL || 'http://localhost:3001/api'}/notifications?${params}`, {
           headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
         if (!res.ok) throw new Error('Failed to load notifications');
@@ -120,7 +120,7 @@ const Notifications = () => {
   const markAsRead = async (notificationId) => {
     try {
       const token = getAuthToken();
-      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/notifications/${notificationId}/read`, {
+      await fetch(`${process.env.VITE_API_URL || 'http://localhost:3001/api'}/notifications/${notificationId}/read`, {
         method: 'PUT',
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
@@ -131,7 +131,7 @@ const Notifications = () => {
   const markAllAsRead = async () => {
     try {
       const token = getAuthToken();
-      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/notifications/mark-all-read`, {
+      await fetch(`${process.env.VITE_API_URL || 'http://localhost:3001/api'}/notifications/mark-all-read`, {
         method: 'PUT',
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
@@ -142,7 +142,7 @@ const Notifications = () => {
   const deleteNotification = async (notificationId) => {
     try {
       const token = getAuthToken();
-      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/notifications/${notificationId}`, {
+      await fetch(`${process.env.VITE_API_URL || 'http://localhost:3001/api'}/notifications/${notificationId}`, {
         method: 'DELETE',
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });

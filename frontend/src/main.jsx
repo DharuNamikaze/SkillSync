@@ -8,16 +8,16 @@ import "./neobrutalism.css";
 import "./theme-overrides.css";
 
 // Dev-only: seed localStorage with a token from env if present and none is set
-if (import.meta.env.VITE_DEV_TOKEN && !localStorage.getItem("skillsync_token")) {
+if (process.env.VITE_DEV_TOKEN && !localStorage.getItem("skillsync_token")) {
   try {
-    localStorage.setItem("skillsync_token", import.meta.env.VITE_DEV_TOKEN);
+    localStorage.setItem("skillsync_token", process.env.VITE_DEV_TOKEN);
   } catch {
     // ignore storage errors in dev
   }
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(
-  <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+  <GoogleOAuthProvider clientId={process.env.VITE_GOOGLE_CLIENT_ID}>
     <AuthProvider>
       <App />
     </AuthProvider>

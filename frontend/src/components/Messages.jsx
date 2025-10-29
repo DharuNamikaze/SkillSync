@@ -27,7 +27,7 @@ function Messages() {
       const token = getAuthToken();
       if (!token) return;
       
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/notifications/unread-counts-by-project`, {
+      const response = await fetch(`${process.env.VITE_API_URL || 'http://localhost:3001/api'}/notifications/unread-counts-by-project`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -92,7 +92,7 @@ function Messages() {
       const token = getAuthToken();
       if (!token) return;
       
-      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/notifications/mark-project-read/${projectId}`, {
+      await fetch(`${process.env.VITE_API_URL || 'http://localhost:3001/api'}/notifications/mark-project-read/${projectId}`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       });
