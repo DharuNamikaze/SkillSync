@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
+import websocketService from '../services/websocketService';
 import {
   ArrowLeft,
   Users,
@@ -40,7 +41,11 @@ const ProjectWorkspace = () => {
   const [loading, setLoading] = useState(true);
   const [sandboxLoading, setSandboxLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [activeTab, setActiveTab] = useState("editor");
+  // Load active tab from localStorage or default to "editor"
+  const [activeTab, setActiveTab] = useState(() => {
+    const saved = localStorage.getItem(`workspace-tab-${projectId}`);
+    return saved || "editor";
+  });
   const [collaborators, setCollaborators] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [messages, setMessages] = useState([]);
@@ -54,11 +59,72 @@ const ProjectWorkspace = () => {
     setSandboxLoading(true); // Start loading when component mounts
   }, [projectId]);
 
+  // Save active tab to localStorage whenever it changes
   useEffect(() => {
-    if (activeTab === "chat" && project?._id) {
+    if (projectId) {
+      localStorage.setItem(`workspace-tab-${projectId}`, activeTab);
+    }
+  }, [activeTab, projectId]);
+
+  // Fetch messages when project is loaded (always load messages in background)
+  useEffect(() => {
+    if (projectId) {
       fetchMessages();
     }
-  }, [projectId, activeTab, project]);
+  }, [projectId]);
+
+  // WebSocket for real-time team chat
+  useEffect(() => {
+    if (!projectId || !user) return;
+
+    const cleanupFns = [];
+
+    // Join project room
+    websocketService.joinProject(projectId);
+    console.log(`Joined workspace chat for project: ${projectId}`);
+
+    // Project message listener
+    cleanupFns.push(
+      websocketService.onProjectMessage(projectId, (message) => {
+        console.log('✅ Received workspace message via WebSocket:', message);
+        
+        setMessages(prev => {
+          // Remove optimistic message with temp ID if it exists
+          const withoutTemp = prev.filter(m => !m.id?.startsWith('temp-'));
+          
+          // Check if real message already exists (prevent duplicates)
+          if (withoutTemp.some(m => m.id === message.id)) {
+            console.log('Message already exists, skipping:', message.id);
+            return prev;
+          }
+          
+          // Transform WebSocket message format
+          const transformedMessage = {
+            id: message.id,
+            message: message.content || message.message,
+            userName: message.sender?.name || message.userName,
+            userAvatar: message.sender?.avatar || message.userAvatar,
+            userId: message.sender?.id || message.userId,
+            timestamp: message.timestamp,
+            type: message.type || 'text',
+            codeBlock: message.codeBlock
+          };
+          
+          console.log('Adding new workspace message to state');
+          return [...withoutTemp, transformedMessage];
+        });
+      })
+    );
+
+    return () => {
+      // Cleanup WebSocket listeners
+      cleanupFns.forEach(cleanup => cleanup());
+      
+      // Leave project room
+      websocketService.leaveProject(projectId);
+      console.log(`Left workspace chat for project: ${projectId}`);
+    };
+  }, [projectId, user?.id]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -78,14 +144,51 @@ const ProjectWorkspace = () => {
   }, [loading, project, user, navigate]);
 
   const fetchMessages = async () => {
+    if (!projectId) {
+      console.warn('No projectId provided for fetching messages');
+      return;
+    }
+
     try {
       setLoadingMessages(true);
+      console.log('📥 [WORKSPACE] Fetching messages for project:', projectId);
       const response = await ProjectsAPI.getProjectMessages(projectId);
+      console.log('📥 [WORKSPACE] Messages response:', response);
+      
       if (response.ok) {
-        setMessages(response.data.reverse()); // Show newest messages at the bottom
+        let messagesData = response.data;
+        
+        // Ensure we have an array
+        if (!Array.isArray(messagesData)) {
+          console.warn('[WORKSPACE] Response data is not an array:', messagesData);
+          messagesData = [];
+        }
+        
+        console.log('📥 [WORKSPACE] Raw messages count:', messagesData.length);
+        
+        // Transform messages to match expected format
+        const transformedMessages = messagesData.map(msg => {
+          return {
+            id: msg.id || msg._id,
+            message: msg.content || msg.message, // content comes first from API
+            userName: msg.sender?.name || msg.userName,
+            userAvatar: msg.sender?.avatar || msg.userAvatar,
+            userId: msg.sender?.id || msg.userId,
+            timestamp: msg.timestamp || msg.createdAt,
+            type: msg.type || 'text',
+            codeBlock: msg.codeBlock
+          };
+        });
+        
+        console.log('✅ [WORKSPACE] Setting', transformedMessages.length, 'messages to state');
+        setMessages(transformedMessages);
+      } else {
+        console.error('[WORKSPACE] API response not ok:', response);
+        setMessages([]);
       }
     } catch (error) {
-      console.error("Error fetching messages:", error);
+      console.error("❌ [WORKSPACE] Error fetching messages:", error);
+      setMessages([]);
     } finally {
       setLoadingMessages(false);
     }
@@ -95,33 +198,14 @@ const ProjectWorkspace = () => {
     if (!newMessage.trim()) return;
 
     try {
-      console.log("Sending message:", {
-        projectId,
-        message: {
-          message: newMessage,
-          userName: user.name,
-          userAvatar:
-            user.picture ||
-            `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}`,
-          type: "text",
-        },
-      });
-
-      const response = await ProjectsAPI.sendProjectMessage(projectId, {
-        message: newMessage,
-        userName: user.name,
-        userAvatar:
-          user.picture ||
-          `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}`,
-        type: "text",
-      });
-
-      if (response.ok) {
-        setMessages((prev) => [...prev, response.data]);
-        setNewMessage("");
-      }
+      const messageContent = newMessage.trim();
+      setNewMessage('');
+      
+      console.log('📤 Sending project message via WebSocket...');
+      await websocketService.sendProjectMessage(projectId, messageContent);
+      console.log('✅ Message sent successfully');
     } catch (error) {
-      console.error("Error sending message:", error);
+      console.error("❌ Error sending message:", error);
       alert("Failed to send message. Please try again.");
     }
   };
@@ -422,7 +506,7 @@ const ProjectWorkspace = () => {
             className="flex items-center gap-2"
           >
             <MessageSquare className="w-4 h-4" />
-            Team Chat--
+            Team Chat
           </Button>
         </div>
       </div>
@@ -569,52 +653,75 @@ const ProjectWorkspace = () => {
         <div className={`h-full ${activeTab === "chat" ? "flex" : "hidden"}`}>
           <div className="h-full flex">
             <div className="flex-1 flex flex-col">
-              <div className="flex-1 p-4 overflow-y-auto">
-                <div className="space-y-4">
-                  {project.messages?.map((message) => (
-                    <div key={message.id} className="flex items-start gap-3">
-                      <img
-                        src={message.userAvatar}
-                        alt={message.userName}
-                        className="w-8 h-8 rounded-full border-2 border-border"
-                      />
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-base font-medium text-sm">
-                            {message.userName}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(message.timestamp).toLocaleTimeString()}
-                          </span>
-                        </div>
-                        <Card className="inline-block max-w-2xl">
-                          <CardContent className="p-3">
-                            {message.type === "code" ? (
-                              <pre className="bg-secondary-background p-2 rounded text-sm overflow-x-auto">
-                                <code
-                                  className={`language-${
-                                    message.codeBlock?.language || "plaintext"
-                                  }`}
-                                >
-                                  {message.codeBlock?.content ||
-                                    message.message}
-                                </code>
-                              </pre>
-                            ) : (
-                              <p className="text-sm whitespace-pre-wrap">
-                                {message.message}
-                              </p>
-                            )}
-                          </CardContent>
-                        </Card>
-                      </div>
+              <div className="flex-1 p-4 overflow-y-auto bg-muted/20">
+                {loadingMessages ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <div className="w-8 h-8 border-2 border-main border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                      <p className="text-sm text-muted-foreground">Loading messages...</p>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {messages.length === 0 ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center">
+                          <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
+                          <p className="text-sm text-muted-foreground">No messages yet</p>
+                          <p className="text-xs text-muted-foreground mt-1">Start the conversation!</p>
+                        </div>
+                      </div>
+                    ) : (
+                      messages.map((message) => {
+                        const isCurrentUser = message.userId === user?.id;
+                        return (
+                          <div key={message.id} className={`flex items-start gap-3 ${isCurrentUser ? 'flex-row-reverse' : ''}`}>
+                            <img
+                              src={message.userAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(message.userName)}`}
+                              alt={message.userName}
+                              className="w-8 h-8 rounded-full border-2 border-border flex-shrink-0"
+                            />
+                            <div className={`flex-1 ${isCurrentUser ? 'flex flex-col items-end' : ''}`}>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-base font-medium text-sm">
+                                  {isCurrentUser ? 'You' : message.userName}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                              <Card className={`inline-block max-w-2xl ${isCurrentUser ? 'bg-main text-white' : ''}`}>
+                                <CardContent className="p-3">
+                                  {message.type === "code" ? (
+                                    <pre className="bg-secondary-background p-2 rounded text-sm overflow-x-auto">
+                                      <code
+                                        className={`language-${
+                                          message.codeBlock?.language || "plaintext"
+                                        }`}
+                                      >
+                                        {message.codeBlock?.content ||
+                                          message.message}
+                                      </code>
+                                    </pre>
+                                  ) : (
+                                    <p className="text-sm whitespace-pre-wrap break-words">
+                                      {message.message}
+                                    </p>
+                                  )}
+                                </CardContent>
+                              </Card>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                    <div ref={chatEndRef} />
+                  </div>
+                )}
               </div>
 
-              <div className="p-4 border-t-2 border-border">
-                <div className="flex gap-2">
+              <div className="p-4 border-t-2 border-border bg-background">
+                <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="flex gap-2">
                   <Input
                     type="text"
                     value={newMessage}
@@ -629,12 +736,13 @@ const ProjectWorkspace = () => {
                     }}
                   />
                   <Button
+                    type="submit"
                     onClick={handleSendMessage}
                     disabled={!newMessage.trim()}
                   >
                     Send
                   </Button>
-                </div>
+                </form>
               </div>
             </div>
 

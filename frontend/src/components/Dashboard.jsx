@@ -94,23 +94,9 @@ function Dashboard() {
     const targetDate = new Date(date);
     if (isNaN(targetDate.getTime())) return "N/A";
 
-    const now = new Date();
-    const diffMs = targetDate.getTime() - now.getTime();
-    if (!Number.isFinite(diffMs)) return "N/A";
-
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-
-    if (diffDays === 0) {
-      if (diffHours <= 0) return "Today";
-      return `In ${diffHours} hour${diffHours !== 1 ? 's' : ''}`;
-    } else if (diffDays === 1) {
-      return "Tomorrow";
-    } else if (diffDays < 0) {
-      return "Overdue";
-    } else {
-      return `In ${diffDays} days`;
-    }
+    // Format: "Jan 15, 2025" or "Dec 3, 2024"
+    const options = { month: 'short', day: 'numeric', year: 'numeric' };
+    return targetDate.toLocaleDateString('en-US', options);
   };
 
   // Format timestamp for activities (robust against invalid inputs)
@@ -329,7 +315,7 @@ function Dashboard() {
                           {getStatusIcon(task.status)}
                         </div>
                         <div>
-                          <h4 className="font-base font-medium">{task.title}</h4>
+                          <h4 className="font-base font-medium">{task.title?.replace(/\s*deadline\s*$/i, '')}</h4>
                           <p className="text-sm text-muted-foreground">{task.project}</p>
                         </div>
                       </div>

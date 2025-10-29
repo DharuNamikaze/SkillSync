@@ -2,13 +2,12 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../ThemeContext";
+import { UsersAPI } from "../lib/api";
 import {
   User,
-  Mail,
   Bell,
   Globe,
   Shield,
-  Smartphone,
   Moon,
   Sun,
   LogOut,
@@ -16,8 +15,7 @@ import {
   Trash2,
   X,
   Check,
-  AlertCircle,
-  Lock
+  AlertCircle
 } from "lucide-react";
 
 function Settings() {
@@ -31,12 +29,30 @@ function Settings() {
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const userData = Object.keys(formData || {}).length ? formData : (user || {});
 
-  // Simulate API call to fetch user data
+  // Fetch user profile data from API
   useEffect(() => {
-    if (user) {
-      setFormData(user);
-      setLoading(false);
-    }
+    const fetchUserProfile = async () => {
+      try {
+        setLoading(true);
+        const response = await UsersAPI.profile();
+        if (response.ok && response.data) {
+          setFormData(response.data);
+        } else if (user) {
+          // Fallback to auth context user
+          setFormData(user);
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+        // Fallback to auth context user
+        if (user) {
+          setFormData(user);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserProfile();
   }, [user]);
 
   // Get theme context
@@ -85,29 +101,44 @@ function Settings() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Simulate API call to update user data
-    setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    // Persist formData to your backend or context here in a real app
-    setUnsavedChanges(false);
-    setLoading(false);
-    
-    // Show success toast
-    setShowSuccessToast(true);
-    setTimeout(() => setShowSuccessToast(false), 3000);
+    try {
+      setLoading(true);
+      const response = await UsersAPI.updateProfile(formData);
+      
+      if (response.ok) {
+        setUnsavedChanges(false);
+        setShowSuccessToast(true);
+        setTimeout(() => setShowSuccessToast(false), 3000);
+      } else {
+        alert(response.error || 'Failed to update settings');
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert(error.message || 'Failed to update settings');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handle account deletion
   const handleDeleteAccount = async () => {
-    // Simulate API call to delete account
-    setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    // In a real app, this would redirect to logout or login page
-    setShowDeleteModal(false);
-    setLoading(false);
-    logout();
+    try {
+      setLoading(true);
+      const response = await UsersAPI.deleteProfile();
+      
+      if (response.ok) {
+        setShowDeleteModal(false);
+        logout();
+        navigate('/login');
+      } else {
+        alert(response.error || 'Failed to delete account');
+      }
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      alert(error.message || 'Failed to delete account');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Loading state
@@ -171,13 +202,6 @@ function Settings() {
                   <span className="font-medium">Preferences</span>
                 </button>
                 <button 
-                  onClick={() => setActiveTab("security")} 
-                  className={`flex items-center space-x-3 px-4 py-3 text-left ${activeTab === "security" ? "bg-blue-50 text-blue-700 border-l-4 border-blue-500" : "text-gray-700 hover:bg-gray-50"}`}
-                >
-                  <Lock className="w-5 h-5" />
-                  <span className="font-medium">Security</span>
-                </button>
-                <button 
                   onClick={() => setActiveTab("danger")} 
                   className={`flex items-center space-x-3 px-4 py-3 text-left ${activeTab === "danger" ? "bg-red-50 text-red-700 border-l-4 border-red-500" : "text-gray-700 hover:bg-gray-50"}`}
                 >
@@ -202,116 +226,25 @@ function Settings() {
                       <p className="text-gray-500 text-sm mt-1">Manage how and when you receive notifications</p>
                     </div>
                     <div className="p-6 space-y-6">
-                      {/* Notification Channels */}
+                      {/* Browser Notifications Only */}
                       <div>
-                        <h3 className="text-sm font-medium text-gray-700 mb-3">Notification Channels</h3>
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <Mail className="w-5 h-5 text-gray-400 mr-3" />
-                              <div>
-                                <p className="text-sm font-medium text-gray-700">Email Notifications</p>
-                                <p className="text-xs text-gray-500">Receive notifications via email</p>
-                              </div>
-                            </div>
-                            <label className="relative inline-flex items-center cursor-pointer">
-                              <input 
-                                type="checkbox" 
-                                className="sr-only peer" 
-                                checked={formData.notifications?.email || false}
-                                onChange={(e) => handleInputChange('notifications', 'email', e.target.checked)}
-                              />
-                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                            </label>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <Bell className="w-5 h-5 text-gray-400 mr-3" />
-                              <div>
-                                <p className="text-sm font-medium text-gray-700">Browser Notifications</p>
-                                <p className="text-xs text-gray-500">Receive notifications in your browser</p>
-                              </div>
-                            </div>
-                            <label className="relative inline-flex items-center cursor-pointer">
-                              <input 
-                                type="checkbox" 
-                                className="sr-only peer" 
-                                checked={formData.notifications?.browser || false}
-                                onChange={(e) => handleInputChange('notifications', 'browser', e.target.checked)}
-                              />
-                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                            </label>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <Smartphone className="w-5 h-5 text-gray-400 mr-3" />
-                              <div>
-                                <p className="text-sm font-medium text-gray-700">Mobile Push Notifications</p>
-                                <p className="text-xs text-gray-500">Receive notifications on your mobile device</p>
-                              </div>
-                            </div>
-                            <label className="relative inline-flex items-center cursor-pointer">
-                              <input 
-                                type="checkbox" 
-                                className="sr-only peer" 
-                                checked={formData.notifications?.mobile || false}
-                                onChange={(e) => handleInputChange('notifications', 'mobile', e.target.checked)}
-                              />
-                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                            </label>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Notification Types */}
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-700 mb-3">Notification Types</h3>
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <Bell className="w-5 h-5 text-gray-400 mr-3" />
                             <div>
-                              <p className="text-sm font-medium text-gray-700">Team Updates</p>
-                              <p className="text-xs text-gray-500">Notifications about your teams' activities</p>
+                              <p className="text-sm font-medium text-gray-700">Browser Notifications</p>
+                              <p className="text-xs text-gray-500">Receive notifications in your browser</p>
                             </div>
-                            <label className="relative inline-flex items-center cursor-pointer">
-                              <input 
-                                type="checkbox" 
-                                className="sr-only peer" 
-                                checked={formData.notifications?.teamUpdates || false}
-                                onChange={(e) => handleInputChange('notifications', 'teamUpdates', e.target.checked)}
-                              />
-                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                            </label>
                           </div>
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-medium text-gray-700">Project Invites</p>
-                              <p className="text-xs text-gray-500">Notifications when you're invited to projects</p>
-                            </div>
-                            <label className="relative inline-flex items-center cursor-pointer">
-                              <input 
-                                type="checkbox" 
-                                className="sr-only peer" 
-                                checked={formData.notifications?.projectInvites || false}
-                                onChange={(e) => handleInputChange('notifications', 'projectInvites', e.target.checked)}
-                              />
-                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                            </label>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-medium text-gray-700">Mentorship Requests</p>
-                              <p className="text-xs text-gray-500">Notifications about mentorship opportunities</p>
-                            </div>
-                            <label className="relative inline-flex items-center cursor-pointer">
-                              <input 
-                                type="checkbox" 
-                                className="sr-only peer" 
-                                checked={formData.notifications?.mentorshipRequests || false}
-                                onChange={(e) => handleInputChange('notifications', 'mentorshipRequests', e.target.checked)}
-                              />
-                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                            </label>
-                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input 
+                              type="checkbox" 
+                              className="sr-only peer" 
+                              checked={formData.notifications?.browser || false}
+                              onChange={(e) => handleInputChange('notifications', 'browser', e.target.checked)}
+                            />
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          </label>
                         </div>
                       </div>
                     </div>
@@ -370,21 +303,6 @@ function Settings() {
                               className="sr-only peer" 
                               checked={formData.privacy?.showLocation || false}
                               onChange={(e) => handleInputChange('privacy', 'showLocation', e.target.checked)}
-                            />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                          </label>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-gray-700">Allow Tagging</p>
-                            <p className="text-xs text-gray-500">Allow others to tag you in posts and projects</p>
-                          </div>
-                          <label className="relative inline-flex items-center cursor-pointer">
-                            <input 
-                              type="checkbox" 
-                              className="sr-only peer" 
-                              checked={formData.privacy?.allowTagging || false}
-                              onChange={(e) => handleInputChange('privacy', 'allowTagging', e.target.checked)}
                             />
                             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                           </label>
@@ -489,102 +407,6 @@ function Settings() {
                         </select>
                       </div>
 
-                      <div>
-                        <label htmlFor="timezone" className="block text-sm font-medium text-gray-700 mb-1">
-                          Timezone
-                        </label>
-                        <select
-                          id="timezone"
-                          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                          value={formData.preferences?.timezone || 'America/Los_Angeles'}
-                          onChange={(e) => handleInputChange('preferences', 'timezone', e.target.value)}
-                        >
-                          <option value="America/Los_Angeles">Pacific Time (US & Canada)</option>
-                          <option value="America/Denver">Mountain Time (US & Canada)</option>
-                          <option value="America/Chicago">Central Time (US & Canada)</option>
-                          <option value="America/New_York">Eastern Time (US & Canada)</option>
-                          <option value="Europe/London">London</option>
-                          <option value="Europe/Paris">Paris</option>
-                          <option value="Asia/Tokyo">Tokyo</option>
-                          <option value="Australia/Sydney">Sydney</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Security Settings */}
-                {activeTab === "security" && (
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-gray-100">
-                      <h2 className="font-semibold text-xl text-gray-900">Security</h2>
-                      <p className="text-gray-500 text-sm mt-1">Manage your account security settings</p>
-                    </div>
-                    <div className="p-6 space-y-6">
-                      <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-700">Change Password</h3>
-                          <p className="text-xs text-gray-500 mt-1">Last changed: {formData.security?.lastPasswordChange || 'Never'}</p>
-                        </div>
-                        <button 
-                          type="button" 
-                          className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-md text-sm font-medium hover:bg-blue-100 transition-colors"
-                        >
-                          Change Password
-                        </button>
-                      </div>
-
-                      <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-700">Two-Factor Authentication</h3>
-                          <p className="text-xs text-gray-500 mt-1">Add an extra layer of security to your account</p>
-                        </div>
-                        <button 
-                          type="button" 
-                          className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-md text-sm font-medium hover:bg-blue-100 transition-colors"
-                        >
-                          {formData.security?.twoFactorEnabled ? 'Manage 2FA' : 'Enable 2FA'}
-                        </button>
-                      </div>
-
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-700 mb-3">Active Sessions</h3>
-                        <div className="bg-gray-50 rounded-lg p-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-medium text-gray-700">Current Session</p>
-                              <p className="text-xs text-gray-500">Windows • Chrome • San Francisco, CA</p>
-                            </div>
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              Active Now
-                            </span>
-                          </div>
-                          {formData.security?.activeSessions > 1 && (
-                            <div className="mt-3 pt-3 border-t border-gray-200">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <p className="text-sm font-medium text-gray-700">Other Session</p>
-                                  <p className="text-xs text-gray-500">macOS • Safari • New York, NY</p>
-                                </div>
-                                <button 
-                                  type="button" 
-                                  className="text-xs text-red-600 hover:text-red-800"
-                                >
-                                  Revoke
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        <div className="mt-3 text-right">
-                          <button 
-                            type="button" 
-                            className="text-sm text-red-600 hover:text-red-800"
-                          >
-                            Log out of all other sessions
-                          </button>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 )}
@@ -618,7 +440,13 @@ function Settings() {
                 {activeTab !== "danger" && (
                   <div className="flex justify-end space-x-3">
                     <button 
-                      type="button" 
+                      type="button"
+                      onClick={() => {
+                        if (user) {
+                          setFormData(user);
+                          setUnsavedChanges(false);
+                        }
+                      }}
                       className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
                       Cancel
@@ -681,6 +509,10 @@ function Settings() {
                   id="confirm"
                   className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm"
                   placeholder="DELETE"
+                  onChange={(e) => {
+                    const btn = document.getElementById('delete-confirm-btn');
+                    if (btn) btn.disabled = e.target.value !== 'DELETE';
+                  }}
                 />
               </div>
               <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
@@ -692,9 +524,11 @@ function Settings() {
                   Cancel
                 </button>
                 <button
+                  id="delete-confirm-btn"
                   type="button"
                   onClick={handleDeleteAccount}
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 flex items-center space-x-2"
+                  disabled={true}
+                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 flex items-center space-x-2 disabled:bg-red-300 disabled:cursor-not-allowed"
                 >
                   <Trash2 className="w-4 h-4" />
                   <span>Delete Account</span>

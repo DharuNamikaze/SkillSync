@@ -34,7 +34,6 @@ const Projects = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
-  const [viewMode, setViewMode] = useState('grid');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
@@ -44,7 +43,6 @@ const Projects = () => {
       setLoading(true);
       try {
         const response = await ProjectsAPI.list({
-          search: searchTerm || undefined,
           status: selectedFilter === 'all' ? undefined : selectedFilter,
           limit: 50
         });
@@ -102,7 +100,7 @@ const Projects = () => {
     };
 
     fetchProjects();
-  }, [searchTerm, selectedFilter]); // Re-fetch when search or filter changes
+  }, [selectedFilter]); // Only re-fetch when filter changes, not search
 
   // Filter and search logic
   const filteredProjects = projects.filter(project => {
@@ -116,16 +114,6 @@ const Projects = () => {
   });
 
   // Helper functions
-  const getStatusColor = (status) => {
-    const colors = {
-      'active': 'bg-green-100 text-green-800 border-green-200',
-      'recruiting': 'bg-blue-100 text-blue-800 border-blue-200',
-      'planning': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      'completed': 'bg-gray-100 text-gray-800 border-gray-200',
-      'paused': 'bg-red-100 text-red-800 border-red-200'
-    };
-    return colors[status] || colors['planning'];
-  };
 
   const getDifficultyIcon = (difficulty) => {
     const config = {
@@ -369,7 +357,7 @@ const Projects = () => {
         </div>
 
       </CardHeader>
-      <CardContent className="pt-0 bg-muted/50 border-t border-border">
+      <CardContent className="pt-4 bg-muted/50 border-t border-border">
         <div className="flex gap-2">
           <Button
             onClick={() => handleJoinProject(project._id)}
@@ -389,18 +377,6 @@ const Projects = () => {
             <Eye className="w-4 h-4" />
             <span>View</span>
           </Button>
-
-          {project.workspace?.ideUrl && (
-            <Button
-              onClick={() => window.location.href = `/projects/${project._id}/workspace`}
-              variant="default"
-              className="flex items-center justify-center gap-2"
-              size="sm"
-            >
-              <Code2 className="w-4 h-4" />
-              <span>IDE</span>
-            </Button>
-          )}
         </div>
       </CardContent>
     </Card>

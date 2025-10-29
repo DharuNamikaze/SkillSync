@@ -301,16 +301,39 @@ function Messages() {
     e.preventDefault();
     if (!newMessage.trim() || !activeProject) return;
 
+    const messageContent = newMessage.trim();
+    const tempId = `temp-${Date.now()}`;
+    
     try {
+      // Clear input immediately
       setNewMessage('');
       
+      // Add optimistic message to UI
+      const optimisticMessage = {
+        id: tempId,
+        content: messageContent,
+        timestamp: new Date().toISOString(),
+        sender: {
+          id: user?.id,
+          name: user?.name || 'You',
+          avatar: user?.picture || ''
+        },
+        type: 'text'
+      };
+      
+      setMessages(prev => [...prev, optimisticMessage]);
+      
       console.log('📤 Sending project message via WebSocket...');
-      await websocketService.sendProjectMessage(activeProject.id, newMessage.trim());
+      await websocketService.sendProjectMessage(activeProject.id, messageContent);
       console.log('✅ Message sent successfully');
 
     } catch (error) {
       console.error('❌ Error sending message:', error);
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(m => m.id !== tempId));
       setError('Failed to send message. Please try again.');
+      // Restore the message text so user can retry
+      setNewMessage(messageContent);
     }
   };
 
