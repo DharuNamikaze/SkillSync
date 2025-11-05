@@ -1,0 +1,9 @@
+# Render Blueprint for the frontend static site
+# If your frontend is in a subfolder, add `rootDir: frontend` under the service.
+
+services:
+  - type: web
+    name: skillsync-frontend
+    env: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
