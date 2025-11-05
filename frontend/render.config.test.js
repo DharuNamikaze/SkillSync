@@ -89,7 +89,7 @@ describe('render.yaml Configuration Tests', () => {
       expect(exists).toBe(true);
     }, 60000);
 
-    it('should contain built assets after build', () => {
+    it('should contain built assets after build', async () => {
       const distPath = resolve(process.cwd(), 'dist');
       
       if (!existsSync(distPath)) {
